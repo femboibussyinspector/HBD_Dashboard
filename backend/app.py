@@ -97,7 +97,8 @@ class BusinessList:
                 host=os.getenv('DB_HOST'),
                 user=os.getenv('DB_USER'),
                 password=os.getenv('DB_PASSWORD'),
-                database=os.getenv('DB_NAME')
+                database=os.getenv('DB_NAME'),
+                port=os.getenv('DB_PORT')
             )
 
             if connection.is_connected():
@@ -394,7 +395,8 @@ def api_results():
            host=os.getenv('DB_HOST'),
            user=os.getenv('DB_USER'),
            password=os.getenv('DB_PASSWORD'),
-           database=os.getenv('DB_NAME')
+           database=os.getenv('DB_NAME'),
+           port=os.getenv('DB_PORT')
         )
         cursor = connection.cursor(dictionary=True)
         cursor.execute("SELECT * FROM google_Map LIMIT 1000")
@@ -458,7 +460,8 @@ def upload_google_data():
            host=os.getenv('DB_HOST'),
            user=os.getenv('DB_USER'),
            password=os.getenv('DB_PASSWORD'),
-           database=os.getenv('DB_NAME')
+           database=os.getenv('DB_NAME'),
+           port=os.getenv('DB_PORT')
         )
         cursor = connection.cursor()
         if request.files:
@@ -517,7 +520,8 @@ DB_CONFIG_AMAZON = {
     'host': os.getenv('DB_HOST'),
     'user': os.getenv('DB_USER'),
     'password': os.getenv('DB_PASSWORD'),
-    'database': os.getenv('DB_NAME')
+    'database': os.getenv('DB_NAME'),
+    'port': os.getenv('DB_PORT')
 }
 
 ua = UserAgent()
@@ -807,7 +811,8 @@ def get_amazon_products():
         os.getenv('DB_HOST'),
         os.getenv('DB_USER'),
         os.getenv('DB_PASSWORD'),
-        os.getenv('DB_NAME'))
+        os.getenv('DB_NAME')),
+        os.getenv('DB_PORT')
 
         connection = mysql.connector.connect(**DB_CONFIG_AMAZON)
         cursor = connection.cursor(dictionary=True)
