@@ -75,6 +75,8 @@ import GoogleMapUploader from "./componunts/data import/GoogleMapUploader";
 import JustdialUploader from "./componunts/data import/JustdialUploader";
 import FreelistingUploader from "./componunts/data import/FreelistingUploader";
 import PostOfficeUploader from "./componunts/data import/PostOfficeUploader";
+import ShikshaUploader from "./componunts/data import/ShikshaUploader";
+import MagicPinUploader from "./componunts/data import/MagicPinUploader";
 
 const icon = {
   className: "w-5 h-5 text-inherit",
@@ -211,6 +213,18 @@ export const routes = [
                 name: "Post Offices",  
                 path: "/data-imports/listing-data/postoffice",
                 element: <PostOfficeUploader />, // Placeholder for Listing Data Uploader page
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Shiksha",  
+                path: "/data-imports/listing-data/shiksha",
+                element: <ShikshaUploader />, // Placeholder for Listing Data Uploader page
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Magic Pin",  
+                path: "/data-imports/listing-data/magicpin",
+                element: <MagicPinUploader />, // Placeholder for Listing Data Uploader page
               },
             ]
           },{
