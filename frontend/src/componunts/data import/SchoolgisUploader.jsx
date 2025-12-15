@@ -2,31 +2,34 @@ import React, { useState } from "react";
 import api from "../../utils/Api";
 
 const SchoolgisUploader = () => {
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);   
   const [loading, setLoading] = useState(false);
 
-  // Handle file selection
   const handleFileChange = (e) => {
-    console.log("Selected file:", e.target.files[0]);
-    setFile(e.target.files[0]);
+    const selectedFiles = Array.from(e.target.files); 
+    console.log("Selected files:", selectedFiles);
+    setFiles(selectedFiles);
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!file) {
-      setMessage("Please select a CSV file first!");
+    if (files.length === 0) {
+      alert("Please select at least one CSV file!");
       return;
     }
 
     const formData = new FormData();
-    formData.append("file", file);
+
+    files.forEach((file) => {
+      formData.append("files", file);
+    });
 
     try {
-      setLoading(true); // start loading
+      setLoading(true);
+
       const response = await api.post(
-        "/upload_schoolgis_data", 
+        "/upload_schoolgis_data",
         formData,
         {
           headers: {
@@ -36,13 +39,13 @@ const SchoolgisUploader = () => {
       );
 
       console.log("Upload successful:", response.data);
-      alert("File uploaded successfully!");
-      setFile(null); // clear file after upload
+      alert("File(s) uploaded successfully!");
+      setFiles([]); 
     } catch (error) {
-      console.error("Error uploading file:", error);
+      console.error("Error uploading files:", error);
       alert("File upload failed!");
     } finally {
-      setLoading(false); // stop loading
+      setLoading(false);
     }
   };
 
@@ -56,6 +59,7 @@ const SchoolgisUploader = () => {
           accept=".csv"
           onChange={handleFileChange}
           disabled={loading}
+          multiple
           className="mb-4 block w-full border border-gray-300 rounded-lg p-2"
         />
 

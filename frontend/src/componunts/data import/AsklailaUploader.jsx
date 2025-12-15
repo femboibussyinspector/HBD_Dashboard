@@ -2,17 +2,15 @@ import React, { useState } from "react";
 import api from "../../utils/Api";
 
 const AsklailaUploader = () => {
-  const [files, setFiles] = useState([]);   // ⬅️ store multiple files
+  const [files, setFiles] = useState([]);   
   const [loading, setLoading] = useState(false);
 
-  // Handle file selection
   const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files); // convert FileList → array
+    const selectedFiles = Array.from(e.target.files); 
     console.log("Selected files:", selectedFiles);
     setFiles(selectedFiles);
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -23,7 +21,6 @@ const AsklailaUploader = () => {
 
     const formData = new FormData();
 
-    // ⬅️ Append each file individually under the key "files"
     files.forEach((file) => {
       formData.append("files", file);
     });
@@ -43,7 +40,7 @@ const AsklailaUploader = () => {
 
       console.log("Upload successful:", response.data);
       alert("File(s) uploaded successfully!");
-      setFiles([]); // clear file list
+      setFiles([]); 
     } catch (error) {
       console.error("Error uploading files:", error);
       alert("File upload failed!");
@@ -60,7 +57,7 @@ const AsklailaUploader = () => {
         <input
           type="file"
           accept=".csv"
-          multiple                 // ⬅️ allow multiple file selection
+          multiple                
           onChange={handleFileChange}
           disabled={loading}
           className="mb-4 block w-full border border-gray-300 rounded-lg p-2"

@@ -2,31 +2,34 @@ import React, { useState } from "react";
 import api from "../../utils/Api";
 
 const AtmUploader = () => {
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);   
   const [loading, setLoading] = useState(false);
 
-  // Handle file selection
   const handleFileChange = (e) => {
-    console.log("Selected file:", e.target.files[0]);
-    setFile(e.target.files[0]);
+    const selectedFiles = Array.from(e.target.files); 
+    console.log("Selected files:", selectedFiles);
+    setFiles(selectedFiles);
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!file) {
-      setMessage("Please select a CSV file first!");
+    if (files.length === 0) {
+      alert("Please select at least one CSV file!");
       return;
     }
 
     const formData = new FormData();
-    formData.append("file", file);
+
+    files.forEach((file) => {
+      formData.append("files", file);
+    });
 
     try {
-      setLoading(true); // start loading
+      setLoading(true);
+
       const response = await api.post(
-        "/upload_atm_data", 
+        "/upload_atm_data",
         formData,
         {
           headers: {
@@ -36,16 +39,15 @@ const AtmUploader = () => {
       );
 
       console.log("Upload successful:", response.data);
-      alert("File uploaded successfully!");
-      setFile(null); // clear file after upload
+      alert("File(s) uploaded successfully!");
+      setFiles([]); 
     } catch (error) {
-      console.error("Error uploading file:", error);
+      console.error("Error uploading files:", error);
       alert("File upload failed!");
     } finally {
-      setLoading(false); // stop loading
+      setLoading(false);
     }
   };
-
   return (
     <div className="p-6 max-w-md bg-white rounded-lg shadow mt-6">
       <h2 className="text-xl font-bold mb-4">Upload Listing CSV File</h2>
@@ -54,6 +56,7 @@ const AtmUploader = () => {
         <input
           type="file"
           accept=".csv"
+          multiple
           onChange={handleFileChange}
           disabled={loading}
           className="mb-4 block w-full border border-gray-300 rounded-lg p-2"
