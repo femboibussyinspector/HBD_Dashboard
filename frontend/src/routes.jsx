@@ -75,8 +75,6 @@ import GoogleMapUploader from "./componunts/data import/GoogleMapUploader";
 import JustdialUploader from "./componunts/data import/JustdialUploader";
 import FreelistingUploader from "./componunts/data import/FreelistingUploader";
 import PostOfficeUploader from "./componunts/data import/PostOfficeUploader";
-import ShikshaUploader from "./componunts/data import/ShikshaUploader";
-import MagicPinUploader from "./componunts/data import/MagicPinUploader";
 
 const icon = {
   className: "w-5 h-5 text-inherit",
@@ -124,11 +122,6 @@ export const routes = [
             children: [
               {
                 icon: <DocumentTextIcon {...icon} />,
-                name: "Google",
-                path: "/data-imports/listing-data/google-map",
-                element: <GoogleUploader />, // Placeholder for Listing Data Report page
-              },{
-                icon: <DocumentTextIcon {...icon} />,
                 name: "Asklaila",  
                 path: "/data-imports/listing-data/asklaila",
                 element: <AsklailaUploader />, // Placeholder for Listing Data Uploader page
@@ -164,11 +157,6 @@ export const routes = [
                 name: "Yellow Pages",  
                 path: "/data-imports/listing-data/yellowpages",
                 element: <YellowPagesUploader />, // Placeholder for Listing Data Uploader page
-              }, {
-                icon: <DocumentTextIcon {...icon} />,
-                name: "Asklaila",
-                path: "/data-imports/listing-data/asklaila",
-                element: <AsklailaUploader />, // Placeholder for Listing Data Uploader page
               },{
                 icon: <DocumentTextIcon {...icon} />,
                 name: "JustDial",
@@ -192,39 +180,19 @@ export const routes = [
               },
               {
                 icon: <DocumentTextIcon {...icon} />,
-                name: "Google Map Scrap Data",  
+                name: "Google Map",  
                 path: "/data-imports/listing-data/googlemap-scrap",
                 element: <GoogleMapUploader />, // Placeholder for Listing Data Uploader page
-              },
-              {
-                icon: <DocumentTextIcon {...icon} />,
-                name: "Justdial",  
-                path: "/data-imports/listing-data/justdial",
-                element: <JustdialUploader />, // Placeholder for Listing Data Uploader page
-              },
-              {
+              },{
                 icon: <DocumentTextIcon {...icon} />,
                 name: "Freelisting",  
                 path: "/data-imports/listing-data/freelisting",
                 element: <FreelistingUploader />, // Placeholder for Listing Data Uploader page
-              },
-              {
+              },{
                 icon: <DocumentTextIcon {...icon} />,
                 name: "Post Offices",  
                 path: "/data-imports/listing-data/postoffice",
                 element: <PostOfficeUploader />, // Placeholder for Listing Data Uploader page
-              },
-              {
-                icon: <DocumentTextIcon {...icon} />,
-                name: "Shiksha",  
-                path: "/data-imports/listing-data/shiksha",
-                element: <ShikshaUploader />, // Placeholder for Listing Data Uploader page
-              },
-              {
-                icon: <DocumentTextIcon {...icon} />,
-                name: "Magic Pin",  
-                path: "/data-imports/listing-data/magicpin",
-                element: <MagicPinUploader />, // Placeholder for Listing Data Uploader page
               },
             ]
           },{
@@ -310,7 +278,7 @@ export const routes = [
 
           },
            {
-             icon: <XCircleIcon {...icon} />,
+             icon: <TableCellsIcon {...icon} />,
              name: "Google Data",
              path: "listing-master-data/google-data",            
              element:<GoogleData/>

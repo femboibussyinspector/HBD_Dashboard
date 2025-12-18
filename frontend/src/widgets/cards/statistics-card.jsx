@@ -2,35 +2,36 @@ import {
   Card,
   CardHeader,
   CardBody,
-  CardFooter,
   Typography,
 } from "@material-tailwind/react";
 import PropTypes from "prop-types";
 
 export function StatisticsCard({ color, icon, title, value, footer }) {
   return (
-    <Card className="border border-blue-gray-100 shadow-sm">
+    <Card className="relative overflow-hidden border border-white/40 bg-white/70 shadow-lg backdrop-blur-xl hover:scale-105 transition-transform duration-300">
+      <div className="absolute top-0 right-0 -mr-4 -mt-4 h-24 w-24 rounded-full bg-blue-gray-50/50 blur-2xl" />
+      
       <CardHeader
         variant="gradient"
         color={color}
         floated={false}
         shadow={false}
-        className="absolute grid h-12 w-12 place-items-center"
+        className="absolute grid h-12 w-12 place-items-center rounded-xl"
       >
         {icon}
       </CardHeader>
-      <CardBody className="p-4 text-right">
-        <Typography variant="small" className="font-normal text-blue-gray-600">
+      <CardBody className="p-4 text-right z-10 relative">
+        <Typography variant="small" className="font-bold text-blue-gray-600 uppercase tracking-widest text-[10px]">
           {title}
         </Typography>
-        <Typography variant="h4" color="blue-gray">
+        <Typography variant="h3" color="blue-gray" className="mt-1">
           {value}
         </Typography>
       </CardBody>
       {footer && (
-        <CardFooter className="border-t border-blue-gray-50 p-4">
+        <CardBody className="border-t border-blue-gray-50/50 p-4">
           {footer}
-        </CardFooter>
+        </CardBody>
       )}
     </Card>
   );
@@ -69,7 +70,5 @@ StatisticsCard.propTypes = {
   value: PropTypes.node.isRequired,
   footer: PropTypes.node,
 };
-
-StatisticsCard.displayName = "/src/widgets/cards/statistics-card.jsx";
 
 export default StatisticsCard;

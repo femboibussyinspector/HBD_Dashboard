@@ -1,193 +1,328 @@
-import { Button, Card, CardBody, CardHeader, Chip, Typography } from '@material-tailwind/react';
-import api from '../../utils/Api';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Typography,
+  Input,
+  Spinner,
+  IconButton,
+} from "@material-tailwind/react";
+import {
+  MagnifyingGlassIcon,
+  ChevronUpDownIcon,
+  ChevronDownIcon,
+  ArrowDownTrayIcon,
+} from "@heroicons/react/24/solid";
+import { productData } from "@/data/productJSON";
+import * as XLSX from "xlsx/dist/xlsx.full.min.js";
 
+const defaultColumns = [
+  { key: "ID", label: "ID", width: 150 },
+  { key: "ASIN", label: "ASIN", width: 150 },
+  { key: "Product_name", label: "Product Name", width: 300 },
+  { key: "price", label: "Price", width: 100 },
+  { key: "rating", label: "Rating", width: 100 },
+  { key: "Number_of_ratings", label: "Number of Ratings", width: 120 },
+  { key: "Brand", label: "Brand", width: 120 },
+  { key: "Seller", label: "Seller", width: 180 },
+  { key: "category", label: "Category", width: 180 },
+  { key: "category_sub_sub_sub", label: "Category Sub Sub Sub", width: 180 },
+  { key: "colour", label: "Colour", width: 100 },
+  { key: "size_options", label: "Size Options", width: 150 },
+  { key: "description", label: "Description", width: 300 },
+  { key: "link", label: "Link", width: 250 },
+  { key: "Image_URLs", label: "Image URLs", width: 200 },
+  { key: "About_the_items_bullet", label: "About the Items Bullet", width: 250 },
+  { key: "Product_details", label: "Product Details", width: 300 },
+  { key: "Additional_Details", label: "Additional Details", width: 200 },
+  { key: "Manufacturer_Name", label: "Manufacturer Name", width: 180 },
+];
 
-const ProductIncomplate = () => {
-   const [loading, setLoading] = useState(false);
-   const [currentPage , setCurrentPage] = useState(1)
-   const [data , setData] = useState([])
-   const[totalRecords , setTotalRecords] = useState(0)
-   // Placeholder for data, replace with actual data fetching logic
-    // const currentPage = 1; // Placeholder for current page, replace with actual pagination logic
-   // Placeholder for total records, replace with actual data fetching logic
-    const limit = 1000; // Placeholder for limit, replace with actual pagination logic
-    const totalPages = Math.ceil(totalRecords / limit);
+const convertToCSV = (arr) => {
+  if (!arr.length) return "";
+  const headers = Object.keys(arr[0]);
+  const rows = arr.map((r) =>
+    headers
+      .map((h) => `"${String(r[h] ?? "").replace(/"/g, "'")}"`)
+      .join(",")
+  );
+  return [headers.join(","), ...rows].join("\n");
+};
 
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const response = await api.get(`/products/incomplete`);
-       
-        setData(response.data.data || []);
-        setTotalRecords(response.data.count || 0);
-        // setTotalRecords(result.total_records || 0);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
+const ProductComplete = () => {
+  const [loading, setLoading] = useState(true);
+  const [fullData, setFullData] = useState([]);
+  const [pageData, setPageData] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
+
+  const [search, setSearch] = useState("");
+  const [areaSearch, setAreaSearch] = useState("");
+
+  const [sortField, setSortField] = useState(null);
+  const [sortOrder, setSortOrder] = useState("asc");
+
+  const [columns, setColumns] = useState(defaultColumns);
+
+  const resizerRef = useRef(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setTimeout(() => {
+      setFullData(productData);
+      setTotal(productData.length);
+      setLoading(false);
+    }, 300);
+  }, []);
+
+  const filteredData = useMemo(() => {
+    let data = [...fullData];
+    if (search) {
+      data = data.filter((x) =>
+        (x.Product_name || "")
+          .toString()
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      );
     }
+    if (areaSearch) {
+      data = data.filter((x) =>
+        (x.category || "")
+          .toString()
+          .toLowerCase()
+          .includes(areaSearch.toLowerCase())
+      );
+    }
+    return data;
+  }, [fullData, search, areaSearch]);
 
-    useEffect(() => {
-      fetchData();
-    },[])
+  const sortedData = useMemo(() => {
+    if (!sortField) return filteredData;
+    return [...filteredData].sort((a, b) => {
+      const A = String(a[sortField] ?? "").toLowerCase();
+      const B = String(b[sortField] ?? "").toLowerCase();
+      if (A === B) return 0;
+      return sortOrder === "asc" ? (A > B ? 1 : -1) : A < B ? 1 : -1;
+    });
+  }, [filteredData, sortField, sortOrder]);
 
+  useEffect(() => {
+    const start = (currentPage - 1) * limit;
+    setPageData(sortedData.slice(start, start + limit));
+    setTotal(sortedData.length);
+  }, [sortedData, currentPage]);
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  const toggleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
+  const downloadCSV = (currentOnly = false) => {
+    const arr = currentOnly ? pageData : fullData;
+    const csv = convertToCSV(arr);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = currentOnly ? "page_data.csv" : "all_data.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadExcel = (currentOnly = false) => {
+    const arr = currentOnly ? pageData : fullData;
+    if (!arr.length) return;
+    const ws = XLSX.utils.json_to_sheet(arr);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, currentOnly ? "page_data.xlsx" : "all_data.xlsx");
+  };
+
+  const startResize = (colKey, e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const col = columns.find((c) => c.key === colKey);
+    const startWidth = col?.width || 100;
+
+    const onMouseMove = (ev) => {
+      const delta = ev.clientX - startX;
+      const newWidth = Math.max(80, startWidth + delta);
+      setColumns((cols) =>
+        cols.map((c) => (c.key === colKey ? { ...c, width: newWidth } : c))
+      );
+    };
+    const onMouseUp = () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  };
 
   return (
-    <div className="mt-12 mb-8 flex flex-col gap-12 px-4">
-      {/* <div className="flex justify-between items-center mb-4">
-        <Typography variant="h4" color="blue-gray">
-          Business Category Data
-        </Typography>
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => {
-            setCurrentPage(1);
-            setSearch(e.target.value);
-          }}
-          className="border rounded-lg px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div> */}
+    <div className="min-h-screen mt-8 mb-12 px-4 bg-white text-black">
+      <div className="flex justify-between items-center mb-4">
+        <Typography variant="h4">Product Data</Typography>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => downloadCSV(false)}>CSV All</Button>
+          <Button size="sm" onClick={() => downloadCSV(true)}>CSV Page</Button>
+          <Button size="sm" onClick={() => downloadExcel(false)}>Excel All</Button>
+          <Button size="sm" onClick={() => downloadExcel(true)}>Excel Page</Button>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader
-          variant="gradient"
-          color="gray"
-          className="mb-8 p-4 flex items-center justify-between"
-         >
-          {/* Left: Title */}
-          <Typography variant="h6" color="white">
-             Product Incomplate Data
-          </Typography>
-
-          {/* Right: Button + Total */}
-          <div className="flex items-center gap-4">
+      <Card className="bg-white text-black border">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-3 p-4 bg-gray-100">
+          <div className="flex gap-3 items-center flex-wrap">
+            <Input
+              label="Search Name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Input
+              label="Search Category..."
+              value={areaSearch}
+              onChange={(e) => setAreaSearch(e.target.value)}
+              icon={<MagnifyingGlassIcon className="h-5 w-5" />}
+            />
+          </div>
+          <div className="flex gap-2 items-center">
+            <div>Page {currentPage} / {totalPages}</div>
             <Button
-              variant="outlined"
-              color="white"
-              className="flex items-center gap-2"
-              // onClick={() => downloadCSV("complete")}
-              onClick={() => console.log("Download CSV")}
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="h-5 w-5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"
-                />
-              </svg>
-              Download Csv
+              Prev
             </Button>
-
-            <Typography variant="h6" color="white">
-              Total: {totalRecords}
-            </Typography>
-          </div> 
+            <Button
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
         </CardHeader>
-        <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
+
+        <CardBody className="p-0 overflow-x-auto">
           {loading ? (
-            <p className="text-center text-blue-500 font-semibold">Loading...</p>
+            <div className="flex justify-center py-10">
+              <Spinner className="h-10 w-10" />
+            </div>
           ) : (
-            <table className="w-full min-w-[640px] table-auto">
-              <thead>
+            <table className="w-full table-fixed border-collapse min-w-[1500px]">
+              <thead className="sticky top-0 z-20 border-b bg-gray-200">
                 <tr>
-                  {["ID","ASIN", "Product_name","price","rating","Number_of_ratings","Brand","Seller","category","subcategory","sub_sub_category","category_sub_sub_sub","colour","size_options","description","link","Image_URLs","About_the_items_bullet","Product_details","Additional_Details","Manufacturer_Name","created_at"].map((head) => (
+                  {columns.map((col) => (
                     <th
-                      key={head}
-                      className="border-b border-blue-gray-50 py-3 px-5 text-left"
+                      key={col.key}
+                      style={{ width: col.width }}
+                      className="px-3 py-2 text-left relative select-none"
                     >
-                      <Typography
-                        variant="small"
-                        className="text-[11px] font-bold uppercase text-blue-gray-400"
-                      >
-                        {head}
-                      </Typography>
+                      <div className="flex items-center justify-between">
+                        <div
+                          className="flex items-center gap-2 cursor-pointer"
+                          onClick={() => toggleSort(col.key)}
+                        >
+                          <span className="capitalize text-sm font-semibold">{col.label}</span>
+                          {sortField === col.key ? (
+                            sortOrder === "asc" ? (
+                              <ChevronUpDownIcon className="h-4" />
+                            ) : (
+                              <ChevronDownIcon className="h-4" />
+                            )
+                          ) : (
+                            <ChevronUpDownIcon className="h-4 opacity-40" />
+                          )}
+                        </div>
+                        <div
+                          onMouseDown={(e) => startResize(col.key, e)}
+                          className="absolute right-0 top-0 h-full w-2 cursor-col-resize"
+                          title="Drag to resize"
+                        ></div>
+                      </div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {data.map((item, idx) => {
-                  const className = `py-3 px-5 ${
-                    idx === data.length - 1 ? "" : "border-b border-blue-gray-50"
-                  }`;
-
-                  return (
-                    <tr key={item.id}>
-                      <td className={className}>{item.id}</td>
-                      <td className={className}>{item.ASIN}</td>
-                      <td className={className}>{item.Product_name}</td>
-                      <td className={className}>{item.price}</td>
-                      <td className={className}>{item.rating}</td>
-                      <td className={className}>{item.Number_of_ratings}</td>
-                      <td className={className}>{item.Brand}</td>
-                      <td className={className}>{item.Seller}</td>
-                      <td className={className}>{item.category}</td>
-                      <td className={className}>{item.subcategory}</td>
-                      <td className={className}>{item.sub_sub_category}</td>
-                      <td className={className}>{item.category_sub_sub_sub}</td>
-                      <td className={className}>{item.colour}</td>
-                      <td className={className}>{item.size_options}</td>
-                      <td className={className}>{item.description}</td>
-                      <td className={className}>{item.link}</td>
-                      <td className={className}>{item.Image_URLs}</td> 
-                      <td className={className}>{item.About_the_items_bullet}</td> 
-                      <td className={className}>{item.Manufacturer_Name}</td> 
-                      <td className={className}>{item.Manufacturer_Name}</td> 
-                      <td className={className}>{item.Manufacturer_Name}</td> 
-                      <td className={className}>{item.created_at}</td> 
-                      
+                {pageData.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length} className="text-center p-6 text-gray-500">
+                      No records found
+                    </td>
+                  </tr>
+                ) : (
+                  pageData.map((row, idx) => (
+                    <tr key={idx} className="border-b hover:bg-gray-50">
+                      {columns.map((col) => (
+                        <td
+                          key={col.key}
+                          style={{ width: col.width, maxWidth: col.width }}
+                          className="px-3 py-3 break-words text-sm"
+                        >
+                          {col.key === "link" && row[col.key] ? (
+                            <a
+                              href={row[col.key]}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-500 underline"
+                            >
+                              {row[col.key].slice(0, 40) + (row[col.key].length > 40 ? "..." : "")}
+                            </a>
+                          ) : (
+                            String(row[col.key] ?? "-")
+                          )}
+                        </td>
+                      ))}
                     </tr>
-                  );
-                })}
+                  ))
+                )}
               </tbody>
             </table>
           )}
         </CardBody>
       </Card>
 
-      {/* Pagination */}
-      <div className="flex justify-center items-center mt-6 gap-2 flex-wrap">
-        <button
-          className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
+      <div className="mt-4 flex justify-center items-center gap-2">
+        <Button size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+          First
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           disabled={currentPage === 1}
-          onClick={() => setCurrentPage((p) => p - 1)}
         >
-          Previous
-        </button>
-        {Array.from({ length: totalPages }, (_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentPage(index + 1)}
-            className={`px-3 py-1 rounded border ${
-              currentPage === index + 1
-                ? "bg-blue-500 text-white"
-                : "bg-white text-blue-500"
-            }`}
-          >
-            {index + 1}
-          </button>
-        ))}
-        <button
-          className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
+          Prev
+        </Button>
+        <div className="px-3 py-1 border rounded">Page {currentPage} / {totalPages}</div>
+        <Button
+          size="sm"
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
           disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage((p) => p + 1)}
         >
           Next
-        </button>
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => setCurrentPage(totalPages)}
+          disabled={currentPage === totalPages}
+        >
+          Last
+        </Button>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ProductIncomplate
+export default ProductComplete;

@@ -1,132 +1,251 @@
-import { Card, CardBody, CardHeader, Typography } from '@material-tailwind/react';
-import React, { useState } from 'react'
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Typography,
+  Input,
+  Select,
+  Option,
+  Button,
+} from "@material-tailwind/react";
+import React, { useMemo, useState } from "react";
+
+/* ---------------- CONFIG ---------------- */
+
+const TABLE_HEADERS = [
+  "ASIN",
+  "Product_name",
+  "price",
+  "rating",
+  "Number_of_ratings",
+  "Brand",
+  "Seller",
+  "category",
+  "subcategory",
+  "colour",
+  "Author",
+  "Manufacturer_Name",
+];
+
+const SEARCH_FIELDS = [
+  "ASIN",
+  "Product_name",
+  "Brand",
+  "Seller",
+  "category",
+  "subcategory",
+];
+
+/* ---------------- COMPONENT ---------------- */
 
 const ProductCategory = () => {
-   const [loading, setLoading] = useState(false);
-   const data = []; // Placeholder for data, replace with actual data fetching logic
-    const currentPage = 1; // Placeholder for current page, replace with actual pagination logic
-    const totalRecords = 0; // Placeholder for total records, replace with actual data fetching logic
-    const limit = 1000; // Placeholder for limit, replace with actual pagination logic
-    const totalPages = Math.ceil(totalRecords / limit);
-  return (
-    <div className="mt-12 mb-8 flex flex-col gap-12 px-4">
-      {/* <div className="flex justify-between items-center mb-4">
-        <Typography variant="h4" color="blue-gray">
-          Business Category Data
-        </Typography>
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => {
-            setCurrentPage(1);
-            setSearch(e.target.value);
-          }}
-          className="border rounded-lg px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div> */}
+  const [loading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [currentPage, setCurrentPage] = useState(1);
 
-      <Card>
-        <CardHeader variant="gradient" color="gray" className="mb-8 p-6">
-          <Typography variant="h6" color="white">
-            Product Category
-          </Typography>
-        </CardHeader>
-        <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
+  const limit = 8;
+
+  /* 🔹 Replace with API data */
+  const data = [];
+
+  /* ---------------- SEARCH + FILTER ---------------- */
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      const matchesSearch = SEARCH_FIELDS.some((field) =>
+        String(item[field] ?? "")
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      );
+
+      const matchesCategory =
+        categoryFilter === "all" ||
+        item.category === categoryFilter;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [data, search, categoryFilter]);
+
+  /* ---------------- SORTING ---------------- */
+  const sortedData = useMemo(() => {
+    if (!sortBy) return filteredData;
+
+    return [...filteredData].sort((a, b) => {
+      const aVal = a[sortBy];
+      const bVal = b[sortBy];
+
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+
+      if (typeof aVal === "number") {
+        return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      return sortOrder === "asc"
+        ? String(aVal).localeCompare(String(bVal))
+        : String(bVal).localeCompare(String(aVal));
+    });
+  }, [filteredData, sortBy, sortOrder]);
+
+  /* ---------------- PAGINATION ---------------- */
+  const totalPages = Math.ceil(sortedData.length / limit);
+  const paginatedData = sortedData.slice(
+    (currentPage - 1) * limit,
+    currentPage * limit
+  );
+
+  /* ---------------- FILTER OPTIONS ---------------- */
+  const categoryOptions = useMemo(() => {
+    return ["all", ...new Set(data.map((d) => d.category).filter(Boolean))];
+  }, [data]);
+
+  /* ---------------- CSV EXPORT ---------------- */
+  const exportCSV = () => {
+    const rows = [TABLE_HEADERS, ...sortedData.map((row) =>
+      TABLE_HEADERS.map((h) => `"${row[h] ?? ""}"`)
+    )];
+
+    const csv = rows.map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "products.csv";
+    a.click();
+  };
+
+  return (
+    <div className="mt-8 px-4">
+      <Card className="border border-gray-200 shadow-sm rounded-xl bg-white">
+        {/* ---------- HEADER ---------- */}
+        <CardHeader
+  floated={false}
+  shadow={false}
+  className="bg-gray-100 border-b border-gray-300 px-6 py-4 rounded-t-xl"
+>
+  <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+    {/* Title */}
+    <div>
+      <Typography
+        variant="h5"
+        className="text-gray-800 font-semibold leading-tight"
+      >
+        Product Category
+      </Typography>
+    </div>
+  </div>
+</CardHeader>
+
+
+
+        {/* ---------- TABLE ---------- */}
+        <CardBody className="px-0 pt-0 pb-2 overflow-x-auto">
           {loading ? (
-            <p className="text-center text-blue-500 font-semibold">Loading...</p>
+            <p className="text-center py-10 text-blue-600 font-medium">
+              Loading...
+            </p>
           ) : (
-            <table className="w-full min-w-[640px] table-auto">
-              <thead>
+            <table className="w-full min-w-max table-auto text-left">
+              <thead className="sticky top-0 bg-gray-50 z-10">
                 <tr>
-                  {["ASIN", "Product_name","price","rating","Number_of_ratings","Brand","Seller","Top_brand","category","subcategory","sub_sub_category","category_sub_sub_sub","colour","size_options","description","link","Image_URLs","About_the_items_bullet","Product_details","Additional_Details","Overall_Details","Author","Manufacturer_Name","Manufacturer_Name"].map((head) => (
+                  {TABLE_HEADERS.map((head) => (
                     <th
                       key={head}
-                      className="border-b border-blue-gray-50 py-3 px-5 text-left"
+                      onClick={() => {
+                        setSortBy(head);
+                        setSortOrder(
+                          sortOrder === "asc" ? "desc" : "asc"
+                        );
+                      }}
+                      className="cursor-pointer px-4 py-3 border-b text-xs font-semibold uppercase text-gray-600 hover:bg-gray-100"
                     >
-                      <Typography
-                        variant="small"
-                        className="text-[11px] font-bold uppercase text-blue-gray-400"
-                      >
+                      <div className="flex items-center gap-1">
                         {head}
-                      </Typography>
+                        {sortBy === head && (
+                          <span>{sortOrder === "asc" ? "▲" : "▼"}</span>
+                        )}
+                      </div>
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody>
-                {data.map((item, idx) => {
-                  const className = `py-3 px-5 ${
-                    idx === data.length - 1 ? "" : "border-b border-blue-gray-50"
-                  }`;
 
-                  return (
-                    <tr key={item.id}>
-                      {/* <td className={className}>{item.id}</td>
-                      <td className={className}>{item.category}</td>
-                      <td className={className}>{item.city}</td>
-                      <td className={className}>{item.name}</td>
-                      <td className={className}>{item.area}</td>
-                      <td className={className}>{item.address}</td>
-                      <td className={className}>{item.phone_no_1}</td>
-                      <td className={className}>{item.phone_no_2}</td>
-                      <td className={className}>{item.url}</td>
-                      <td className={className}>{item.ratings}</td>
-                      <td className={className}>{item.sub_category}</td>
-                      <td className={className}>{item.state}</td>
-                      <td className={className}>{item.country}</td>
-                      <td className={className}>{item.email}</td>
-                      <td className={className}>{item.latitude}</td>
-                      <td className={className}>{item.longitude}</td> */}
-                      {/* <td className={className}>
-                        <Chip
-                          variant="gradient"
-                          color="green"
-                          value="active"
-                          className="py-0.5 px-2 text-[11px] font-medium w-fit"
-                        />
-                      </td> */}
+              <tbody>
+                {paginatedData.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={TABLE_HEADERS.length}
+                      className="text-center py-10 text-gray-400"
+                    >
+                      No records found
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedData.map((item, idx) => (
+                    <tr
+                      key={item.ASIN || idx}
+                      className="hover:bg-gray-50 transition"
+                    >
+                      {TABLE_HEADERS.map((key) => (
+                        <td
+                          key={key}
+                          title={item[key]}
+                          className="px-4 py-3 text-sm text-gray-700 max-w-[180px] truncate"
+                        >
+                          {item[key] ?? "-"}
+                        </td>
+                      ))}
                     </tr>
-                  );
-                })}
+                  ))
+                )}
               </tbody>
             </table>
           )}
         </CardBody>
       </Card>
 
-      {/* Pagination */}
-      <div className="flex justify-center items-center mt-6 gap-2 flex-wrap">
-        <button
-          className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage((p) => p - 1)}
-        >
-          Previous
-        </button>
-        {Array.from({ length: totalPages }, (_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentPage(index + 1)}
-            className={`px-3 py-1 rounded border ${
-              currentPage === index + 1
-                ? "bg-blue-500 text-white"
-                : "bg-white text-blue-500"
-            }`}
+      {/* ---------- PAGINATION ---------- */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-6 flex-wrap">
+          <Button
+            size="sm"
+            variant="outlined"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => p - 1)}
           >
-            {index + 1}
-          </button>
-        ))}
-        <button
-          className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
-          disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage((p) => p + 1)}
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  )
-}
+            Prev
+          </Button>
 
-export default ProductCategory
+          {Array.from({ length: totalPages }, (_, i) => (
+            <Button
+              key={i}
+              size="sm"
+              onClick={() => setCurrentPage(i + 1)}
+              className={
+                currentPage === i + 1
+                  ? "bg-blue-600"
+                  : "bg-white text-gray-700 border"
+              }
+            >
+              {i + 1}
+            </Button>
+          ))}
+
+          <Button
+            size="sm"
+            variant="outlined"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ProductCategory;

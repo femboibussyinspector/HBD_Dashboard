@@ -1,279 +1,261 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  Button,
   Card,
+  CardBody,
   CardHeader,
   Typography,
-  CardBody,
   Input,
-  Button,
+  Spinner,
 } from "@material-tailwind/react";
-import { downloadCSV } from "../../utils/Itemcsvdownload";
-import api from "../../utils/Api";
 
-const ListingIncomplate = () => {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [citySearch, setCitySearch] = useState("");
-  const [categorySearch, setCategorySearch] = useState("");
+import {
+  MagnifyingGlassIcon,
+  ChevronUpDownIcon,
+  ChevronDownIcon,
+} from "@heroicons/react/24/solid";
 
-  // Pagination states
+import { listingData } from "@/data/listingJSON";
+import * as XLSX from "xlsx/dist/xlsx.full.min.js";
+
+const defaultColumns = [
+  { key: "name", label: "Name", width: 220 },
+  { key: "address", label: "Address", width: 320 },
+  { key: "website", label: "Website", width: 180 },
+  { key: "phone_number", label: "Contact", width: 140 },
+  { key: "reviews_count", label: "Review Count", width: 120 },
+  { key: "reviews_average", label: "Review Avg", width: 120 },
+  { key: "category", label: "Category", width: 140 },
+  { key: "subcategory", label: "Sub-Category", width: 140 },
+  { key: "city", label: "City", width: 140 },
+  { key: "state", label: "State", width: 140 },
+  { key: "area", label: "Area", width: 140 },
+];
+
+// Convert JSON to CSV
+const convertToCSV = (arr) => {
+  if (!arr?.length) return "";
+  const headers = Object.keys(arr[0]);
+  const rows = arr.map((r) =>
+    headers.map((h) => `"${String(r[h] ?? "").replace(/"/g, "'")}"`).join(",")
+  );
+  return [headers.join(","), ...rows].join("\n");
+};
+
+const ListingComplete = () => {
+  const [loading, setLoading] = useState(true);
+  const [fullData, setFullData] = useState([]);
+  const [pageData, setPageData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
 
+  const [search, setSearch] = useState("");
+  const [areaSearch, setAreaSearch] = useState("");
+
+  const [sortField, setSortField] = useState(null);
+  const [sortOrder, setSortOrder] = useState("asc");
+
+  const [columns] = useState(defaultColumns);
+
+  // Load Data
   useEffect(() => {
-    fetchData();
-  }, [currentPage, rowsPerPage, citySearch, categorySearch]);
-
-  const fetchData = async () => {
     setLoading(true);
-    try {
-      // const response = await axios.get(
-      //   `https://dashboard.citydealsbazar.com/flask/items/incomplete?page=${currentPage}&limit=${rowsPerPage}`
-      // );
-      const response = await api.get(
-        `/items/incomplete?page=${currentPage}&limit=${rowsPerPage}`
-      );
-      const result = response.data;
-
-      let filtered = result.items || [];
-
-      // --- Frontend filter on city & category ---
-      filtered = filtered.filter((item) => {
-        const cityMatch = citySearch
-          ? item.city?.toLowerCase().includes(citySearch.toLowerCase())
-          : true;
-        const categoryMatch = categorySearch
-          ? item.category?.toLowerCase().includes(categorySearch.toLowerCase())
-          : true;
-        return cityMatch && categoryMatch;
-      });
-
-      setData(filtered);
-      setTotalPages(result.pages);
-      setTotalCount(result.total); // ✅ from backend
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
+    setTimeout(() => {
+      setFullData(listingData);
+      setTotal(listingData.length);
       setLoading(false);
+    }, 300);
+  }, []);
+
+  // Filter Data (Safe with Strings)
+  const filteredData = useMemo(() => {
+    let data = [...fullData];
+
+    const safeValue = (value) => String(value ?? "").toLowerCase();
+
+    if (search) {
+      const s = search.toLowerCase();
+      data = data.filter((x) => safeValue(x.name).includes(s));
+    }
+
+    if (areaSearch) {
+      const s = areaSearch.toLowerCase();
+      data = data.filter((x) => safeValue(x.category).includes(s));
+    }
+
+    return data;
+  }, [fullData, search, areaSearch]);
+
+  // Sort Data
+  const sortedData = useMemo(() => {
+    if (!sortField) return filteredData;
+
+    return [...filteredData].sort((a, b) => {
+      const A = String(a[sortField] ?? "").toLowerCase();
+      const B = String(b[sortField] ?? "").toLowerCase();
+      if (A === B) return 0;
+      return sortOrder === "asc" ? (A > B ? 1 : -1) : (A < B ? 1 : -1);
+    });
+  }, [filteredData, sortField, sortOrder]);
+
+  // Pagination
+  useEffect(() => {
+    const start = (currentPage - 1) * limit;
+    setPageData(sortedData.slice(start, start + limit));
+    setTotal(sortedData.length);
+  }, [sortedData, currentPage]);
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  // Sorting Handler
+  const toggleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
     }
   };
 
-  const handlePrev = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  // CSV Download
+  const downloadCSV = (currentOnly = false) => {
+    const arr = currentOnly ? pageData : fullData;
+    const csv = convertToCSV(arr);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = currentOnly ? "listing_page.csv" : "listing_all.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  const handleNext = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  // Excel Download
+  const downloadExcel = (currentOnly = false) => {
+    const arr = currentOnly ? pageData : fullData;
+    if (!arr.length) return;
+
+    const ws = XLSX.utils.json_to_sheet(arr);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Listings");
+    XLSX.writeFile(wb, currentOnly ? "listing_page.xlsx" : "listing_all.xlsx");
   };
 
   return (
-    <div className="mt-12 mb-8 flex flex-col gap-12 px-4">
-      {/* Search Inputs */}
-      <div className="flex justify-end items-center">
-        <div className="w-56 mr-3">
-          <Input
-            label="Search City"
-            value={citySearch}
-            onChange={(e) => {
-              setCitySearch(e.target.value);
-              setCurrentPage(1); // reset to first page
-            }}
-            crossOrigin=""
-            className="h-12"
-          />
-        </div>
-        <div className="w-56">
-          <Input
-            label="Search Category"
-            value={categorySearch}
-            onChange={(e) => {
-              setCategorySearch(e.target.value);
-              setCurrentPage(1); // reset to first page
-            }}
-            crossOrigin=""
-            className="h-12"
-          />
+    <div className="min-h-screen mt-8 mb-12 px-4 rounded bg-white text-black">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <Typography variant="h4" className="pb-2">
+          Listing Incomplete Data
+        </Typography>
+
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => downloadCSV(false)} className="bg-gray-800 text-gray-100">
+            CSV All
+          </Button>
+          <Button size="sm" onClick={() => downloadCSV(true)} className="bg-gray-800 text-gray-100">
+            CSV Page
+          </Button>
+          <Button size="sm" onClick={() => downloadExcel(false)} className="bg-gray-800 text-gray-100">
+            Excel All
+          </Button>
+          <Button size="sm" onClick={() => downloadExcel(true)} className="bg-gray-800 text-gray-100">
+            Excel Page
+          </Button>
         </div>
       </div>
 
-      {/* Table Section */}
-      <Card>
-       <CardHeader
-          variant="gradient"
-          color="gray"
-          className="mb-8 p-4 flex items-center justify-between"
-          >
-          {/* Left: Title */}
-          <Typography variant="h6" color="white">
-            Listing Incomplete Data
-          </Typography>
-          
-          {/* Right: Button + Total */}
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outlined"
-              color="white"
-              className="flex items-center gap-2"
-              onClick={() => downloadCSV("incomplete")}
-             >
-             <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="h-5 w-5"
-                >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"
-                />
-              </svg>
-                Download Csv
-            </Button>
-              <Typography variant="h6" color="white">
-                Total: {totalCount}
-              </Typography>
+      {/* Table Card */}
+      <Card className="bg-white text-black border">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-3 p-4 bg-gray-100">
+          <div className="flex gap-3 items-center flex-wrap">
+            <Input label="Search Name..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input
+              label="Search Category..."
+              value={areaSearch}
+              onChange={(e) => setAreaSearch(e.target.value)}
+              icon={<MagnifyingGlassIcon className="h-5 w-5" />}
+            />
           </div>
-        </CardHeader>       
-                  
-        <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
+
+          <div className="flex gap-2 items-center">
+            <div>Page {currentPage} / {totalPages}</div>
+            <Button size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>Prev</Button>
+            <Button size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>Next</Button>
+          </div>
+        </CardHeader>
+
+        {/* Table Body */}
+        <CardBody className="p-0 overflow-x-auto">
           {loading ? (
-            <p className="text-center text-blue-500 font-semibold">Loading...</p>
-          ) : (
-            <div>
-              <table className="w-full min-w-[640px] table-auto">
-                <thead>
-                  <tr>
-                    {["id",
-                      "name",
-                      "address",
-                      "category",
-                      "sub category",
-                      "city",
-                      "area",
-                      "state",
-                      "phone_no_1",
-                      "phone_no_2",
-                      "phone_no_3",
-                      "ratings",
-                      "source",
-                      "country",
-                      "email",
-                      "latitude",
-                      "longitude",
-                      "reviews",
-                      "facebook_url",
-                      "twitter_url",
-                      "linkedin_url",
-                      "description",
-                      "pincode",
-                      "virtual_phone_no",
-                      "whatsapp_no",
-                      "avg_spent",
-                      "cost_for_two",
-                    ].map((head) => (
-                      <th
-                        key={head}
-                        className="border-b border-blue-gray-50 py-3 px-5 text-left"
-                      >
-                        <Typography
-                          variant="small"
-                          className="text-[11px] font-bold uppercase text-blue-gray-400"
-                        >
-                          {head}
-                        </Typography>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.length > 0 ? (
-                    data.map((item, idx) => {
-                      const className = `py-3 px-5 ${
-                        idx === data.length - 1
-                          ? ""
-                          : "border-b border-blue-gray-50"
-                      }`;
-
-                      return (
-                        <tr key={item.id} className="border-b border-blue-gray-50 py-3 px-5 text-left">
-                          <td className={className}>{item.id}</td>
-                          <td className={className}>{item.name}</td>
-                          <td className={className}><div className="max-h-[80px] min-w-[220px] max-w-[260px] overflow-y-hidden overflow-x-hidden whitespace-normal break-words">{item.address}</div></td>
-                          <td className={className}>{item.category}</td>
-                          <td className={className}>{item.sub_category}</td>
-                          <td className={className}>{item.city}</td>
-                          <td className={className}>{item.area}</td>
-                          <td className={className}>{item.state}</td>
-                          <td className={className}>{item.phone_no_1}</td>
-                          <td className={className}>{item.phone_no_2}</td>
-                          <td className={className}>{item.phone_no_3}</td>
-                          <td className={className}>{item.ratings}</td>
-                          <td className={className}>{item.source}</td>
-                          <td className={className}>{item.country}</td>
-                          <td className={className}>{item.email}</td>
-                          <td className={className}>{item.latitude}</td>
-                          <td className={className}>{item.longitude}</td>
-                          <td className={className}>{item.reviews}</td>
-                          <td className={className}>{item.facebook_url}</td>
-                          <td className={className}>{item.twitter_url}</td>
-                          <td className={className}>{item.linkedin_url}</td>
-                          <td className={className}>{item.description}</td>
-                          <td className={className}>{item.pincode}</td>
-                          <td className={className}>{item.virtual_phone_no}</td>
-                          <td className={className}>{item.whatsapp_no}</td>
-                          <td className={className}>{item.avg_spent}</td>
-                          <td className={className}>{item.cost_for_two}</td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan="26"
-                        className="text-center py-4 text-red-500 font-semibold"
-                      >
-                        No matching results found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              {/* Pagination Controls */}
-              {totalCount > 0 && (
-                <div className="flex justify-between items-center mt-4 px-4">
-                  <Button
-                    size="sm"
-                    variant="outlined"
-                    onClick={handlePrev}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <Typography variant="small" className="text-gray-700">
-                    Page {currentPage} of {totalPages}
-                  </Typography>
-                  <Button
-                    size="sm"
-                    variant="outlined"
-                    onClick={handleNext}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
+            <div className="flex justify-center py-10">
+              <Spinner className="h-10 w-10" />
             </div>
+          ) : (
+            <table className="w-full table-fixed border-collapse min-w-[1500px]">
+              <thead className="sticky top-0 z-20 border-b bg-gray-200">
+                <tr>
+                  {columns.map((col) => (
+                    <th key={col.key} style={{ width: col.width }} className="px-3 py-2 text-left">
+                      <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleSort(col.key)}>
+                        <span className="capitalize text-sm font-semibold">{col.label}</span>
+
+                        {sortField === col.key ? (
+                          sortOrder === "asc" ? <ChevronUpDownIcon className="h-4" /> : <ChevronDownIcon className="h-4" />
+                        ) : (
+                          <ChevronUpDownIcon className="h-4 opacity-40" />
+                        )}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {pageData.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length} className="text-center p-6">No records found</td>
+                  </tr>
+                ) : (
+                  pageData.map((row, idx) => (
+                    <tr key={idx} className="border-b hover:bg-gray-50">
+                      {columns.map((col) => (
+                        <td key={col.key} style={{ width: col.width }} className="px-3 py-3 break-words text-sm">
+                          {String(row[col.key] ?? "-")}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           )}
         </CardBody>
       </Card>
+
+      {/* Footer Pagination */}
+      <div className="mt-4 flex justify-center items-center gap-2">
+        <Button size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+          First
+        </Button>
+        <Button size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>
+          Prev
+        </Button>
+
+        <div className="px-3 py-1 border rounded">
+          Page {currentPage} / {totalPages}
+        </div>
+
+        <Button size="sm" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+          Next
+        </Button>
+        <Button size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>
+          Last
+        </Button>
+      </div>
     </div>
   );
 };
 
-export default ListingIncomplate;
+export default ListingComplete;

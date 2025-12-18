@@ -2,34 +2,31 @@ import React, { useState } from "react";
 import api from "../../utils/Api";
 
 const GoogleUploader = () => {
-  const [files, setFiles] = useState([]);   
+  const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Handle file selection
   const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files); 
-    console.log("Selected files:", selectedFiles);
-    setFiles(selectedFiles);
+    console.log("Selected file:", e.target.files[0]);
+    setFile(e.target.files[0]);
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (files.length === 0) {
-      alert("Please select at least one CSV file!");
+    if (!file) {
+      setMessage("Please select a CSV file first!");
       return;
     }
 
     const formData = new FormData();
-
-    files.forEach((file) => {
-      formData.append("files", file);
-    });
+    formData.append("file", file);
 
     try {
-      setLoading(true);
-
+      setLoading(true); // start loading
       const response = await api.post(
-        "/upload_google_map_data",
+        "/upload_google_map_data", 
         formData,
         {
           headers: {
@@ -39,15 +36,16 @@ const GoogleUploader = () => {
       );
 
       console.log("Upload successful:", response.data);
-      alert("File(s) uploaded successfully!");
-      setFiles([]); 
+      alert("File uploaded successfully!");
+      setFile(null); // clear file after upload
     } catch (error) {
-      console.error("Error uploading files:", error);
+      console.error("Error uploading file:", error);
       alert("File upload failed!");
     } finally {
-      setLoading(false);
+      setLoading(false); // stop loading
     }
   };
+
   return (
     <div className="p-6 max-w-md bg-white rounded-lg shadow mt-6">
       <h2 className="text-xl font-bold mb-4">Upload Listing CSV File</h2>
@@ -57,7 +55,6 @@ const GoogleUploader = () => {
           type="file"
           accept=".csv"
           onChange={handleFileChange}
-          multiple
           disabled={loading}
           className="mb-4 block w-full border border-gray-300 rounded-lg p-2"
         />

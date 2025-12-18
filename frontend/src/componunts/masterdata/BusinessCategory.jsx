@@ -3,7 +3,6 @@ import {
   Card,
   CardHeader,
   Typography,
-  Chip,
   CardBody,
 } from "@material-tailwind/react";
 import api from "../../utils/Api";
@@ -13,25 +12,16 @@ const BusinessCategory = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
 
   const limit = 1000;
   const totalPages = Math.ceil(totalRecords / limit);
 
-useEffect(() => {
-  const delayDebounce = setTimeout(() => {
-    if (search.trim() === "") {
-      fetchData(currentPage);
-    } else {
-      fetchSearchResults(search);
-    }
-  }, 500); // wait for 500ms after user stops typing
+  /* ---------------- FETCH DATA ---------------- */
+  useEffect(() => {
+    fetchData(currentPage);
+  }, [currentPage]);
 
-  return () => clearTimeout(delayDebounce);
-}, [search, currentPage]);
-
-
-  const fetchData = async (page, searchTerm = "") => {
+  const fetchData = async (page) => {
     setLoading(true);
     try {
       const response = await api.get(
@@ -47,59 +37,64 @@ useEffect(() => {
     }
   };
 
-const fetchSearchResults = async (query) => {
-  setLoading(true);
-  try {
-    const response = await api.get(`/search?query=${query}`);
-    const result = await response.json();
-    setData(result || []);
-    setTotalRecords(result.total_records || 0); // fallback if no total_records
-  } catch (error) {
-    console.error("Error searching data:", error);
-  } finally {
-    setLoading(false);
-  }
-};
-  
   return (
-    <div className="mt-12 mb-8 flex flex-col gap-12 px-4">
-      <div className="flex justify-between items-center mb-4">
-        <Typography variant="h4" color="blue-gray">
-          Business Category Data
-        </Typography>
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => {
-            setCurrentPage(1);
-            setSearch(e.target.value);
-          }}
-          className="border rounded-lg px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+    <div className="mt-8 mb-8 px-4">
+      {/* Title */}
+      <Typography
+        variant="h4"
+        className="text-gray-800 font-semibold mb-4"
+      >
+        Business Category Data
+      </Typography>
 
-      <Card>
-        <CardHeader variant="gradient" color="gray" className="mb-8 p-6">
-          <Typography variant="h6" color="white">
+      {/* Card */}
+      <Card className="border border-gray-200 rounded-xl shadow-sm bg-white overflow-hidden">
+        {/* Header */}
+        <CardHeader
+          floated={false}
+          shadow={false}
+          className="bg-gray-100 border-b border-gray-300 px-6 py-4"
+        >
+          <Typography variant="h6" className="text-gray-800 font-semibold">
             Business Category
           </Typography>
         </CardHeader>
-        <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
+
+        {/* Table */}
+        <CardBody className="overflow-x-auto px-0 pt-0 pb-2">
           {loading ? (
-            <p className="text-center text-blue-500 font-semibold">Loading...</p>
+            <p className="text-center py-8 text-blue-600 font-medium">
+              Loading...
+            </p>
           ) : (
-            <table className="w-full min-w-[640px] table-auto">
-              <thead>
+            <table className="w-full min-w-[900px] table-auto text-left">
+              <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
-                  {["ID", "category","city","name","area","address","phone_no_1","phone_no_2","url","ratings","Sub Category","State","Country","Email","Latitude","Longitude"].map((head) => (
+                  {[
+                    "ID",
+                    "Category",
+                    "City",
+                    "Name",
+                    "Area",
+                    "Address",
+                    "Phone 1",
+                    "Phone 2",
+                    "URL",
+                    "Ratings",
+                    "Sub Category",
+                    "State",
+                    "Country",
+                    "Email",
+                    "Latitude",
+                    "Longitude",
+                  ].map((head) => (
                     <th
                       key={head}
-                      className="border-b border-blue-gray-50 py-3 px-5 text-left"
+                      className="border-b border-gray-200 px-4 py-3"
                     >
                       <Typography
                         variant="small"
-                        className="text-[11px] font-bold uppercase text-blue-gray-400"
+                        className="text-[11px] font-semibold uppercase text-gray-600"
                       >
                         {head}
                       </Typography>
@@ -107,41 +102,51 @@ const fetchSearchResults = async (query) => {
                   ))}
                 </tr>
               </thead>
-              <tbody>
-                {data.map((item, idx) => {
-                  const className = `py-3 px-5 ${
-                    idx === data.length - 1 ? "" : "border-b border-blue-gray-50"
-                  }`;
 
-                  return (
-                    <tr key={item.id}>
-                      <td className={className}>{item.id}</td>
-                      <td className={className}>{item.category}</td>
-                      <td className={className}>{item.city}</td>
-                      <td className={className}>{item.name}</td>
-                      <td className={className}>{item.area}</td>
-                      <td className={className}>{item.address}</td>
-                      <td className={className}>{item.phone_no_1}</td>
-                      <td className={className}>{item.phone_no_2}</td>
-                      <td className={className}>{item.url}</td>
-                      <td className={className}>{item.ratings}</td>
-                      <td className={className}>{item.sub_category}</td>
-                      <td className={className}>{item.state}</td>
-                      <td className={className}>{item.country}</td>
-                      <td className={className}>{item.email}</td>
-                      <td className={className}>{item.latitude}</td>
-                      <td className={className}>{item.longitude}</td>
-                      {/* <td className={className}>
-                        <Chip
-                          variant="gradient"
-                          color="green"
-                          value="active"
-                          className="py-0.5 px-2 text-[11px] font-medium w-fit"
-                        />
-                      </td> */}
+              <tbody>
+                {data.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={16}
+                      className="text-center py-8 text-gray-400"
+                    >
+                      No data found
+                    </td>
+                  </tr>
+                ) : (
+                  data.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-gray-50 transition"
+                    >
+                      {[
+                        item.id,
+                        item.category,
+                        item.city,
+                        item.name,
+                        item.area,
+                        item.address,
+                        item.phone_no_1,
+                        item.phone_no_2,
+                        item.url,
+                        item.ratings,
+                        item.sub_category,
+                        item.state,
+                        item.country,
+                        item.email,
+                        item.latitude,
+                        item.longitude,
+                      ].map((value, i) => (
+                        <td
+                          key={i}
+                          className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap"
+                        >
+                          {value ?? "-"}
+                        </td>
+                      ))}
                     </tr>
-                  );
-                })}
+                  ))
+                )}
               </tbody>
             </table>
           )}
@@ -149,35 +154,39 @@ const fetchSearchResults = async (query) => {
       </Card>
 
       {/* Pagination */}
-      <div className="flex justify-center items-center mt-6 gap-2 flex-wrap">
-        <button
-          className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage((p) => p - 1)}
-        >
-          Previous
-        </button>
-        {Array.from({ length: totalPages }, (_, index) => (
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-6 flex-wrap">
           <button
-            key={index}
-            onClick={() => setCurrentPage(index + 1)}
-            className={`px-3 py-1 rounded border ${
-              currentPage === index + 1
-                ? "bg-blue-500 text-white"
-                : "bg-white text-blue-500"
-            }`}
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => p - 1)}
+            className="px-4 py-1.5 rounded-lg border text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
           >
-            {index + 1}
+            Previous
           </button>
-        ))}
-        <button
-          className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
-          disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage((p) => p + 1)}
-        >
-          Next
-        </button>
-      </div>
+
+          {Array.from({ length: totalPages }, (_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentPage(index + 1)}
+              className={`px-4 py-1.5 rounded-lg text-sm border ${
+                currentPage === index + 1
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              {index + 1}
+            </button>
+          ))}
+
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => p + 1)}
+            className="px-4 py-1.5 rounded-lg border text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,114 +1,144 @@
-// import { authorsTableData } from '@/data';
-import { authorsTableData } from '../../data/authors-table-data';
-import { Avatar, Card, CardBody, CardHeader, Chip, Typography } from '@material-tailwind/react';
-import React, { useEffect, useState } from 'react'
-import api from "../../utils/Api";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  Chip,
+  Input,
+  Typography,
+} from "@material-tailwind/react";
+import React, { useEffect, useState } from "react";
+
+// Import local data
+import { authorsTableData } from "@/data/authors-table-data";
 
 const ServiceCategory = () => {
-  const [data, setData] = useState([]);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalRecords, setTotalRecords] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [search, setSearch] = useState(""); // Search state
-  
-    const limit = 1000;
-    const totalPages = Math.ceil(totalRecords / limit);
-  
-    useEffect(() => {
-      fetchData(currentPage, search);
-    }, [currentPage, search]);
-  
-    const fetchData = async (page, searchTerm = "") => {
-      setLoading(true);
-      try {
-        const response = await api.get(
-          `/read_master_input/?page=${page}&limit=${limit}&search=${searchTerm}`
-        );
-        const result = await response.json();
-        setData(result.data || []);
-        setTotalRecords(result.total_records || 0);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [data, setData] = useState(authorsTableData);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    filterData(search);
+  }, [search]);
+
+  const filterData = (searchTerm) => {
+    if (!searchTerm) {
+      setData(authorsTableData);
+      return;
+    }
+
+    const filtered = authorsTableData.filter((item) =>
+      (item.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    setData(filtered);
+  };
+
   return (
     <div className="mt-12 mb-8 flex flex-col gap-12">
-       <Card>
-        <CardHeader variant="gradient" color="gray" className="mb-8 p-6">
+      <Card>
+        <CardHeader
+          variant="gradient"
+          color="gray"
+          className="mb-6 p-6 flex justify-between items-center"
+        >
           <Typography variant="h6" color="white">
             Service Category
           </Typography>
+
+          <Input
+            label="Search author..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="bg-white rounded"
+          />
         </CardHeader>
+
         <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
-          <table className="w-full min-w-[640px] table-auto">
-            <thead>
-              <tr>
-                {["author", "function", "status", "employed", ""].map((el) => (
-                  <th
-                    key={el}
-                    className="border-b border-blue-gray-50 py-3 px-5 text-left"
-                  >
-                    <Typography
-                      variant="small"
-                      className="text-[11px] font-bold uppercase text-blue-gray-400"
+          {data.length === 0 ? (
+            <div className="text-center py-8 text-gray-600">
+              No matching records
+            </div>
+          ) : (
+            <table className="w-full min-w-[640px] table-auto">
+              <thead>
+                <tr>
+                  {["Author", "Function", "Status", "Employed", ""].map((el) => (
+                    <th
+                      key={el}
+                      className="border-b border-blue-gray-50 py-3 px-5 text-left"
                     >
-                      {el}
-                    </Typography>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {authorsTableData.map(
-                ({ img, name, email, job, online, date }, key) => {
+                      <Typography
+                        variant="small"
+                        className="text-[11px] font-bold uppercase text-blue-gray-400"
+                      >
+                        {el}
+                      </Typography>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {data.map(({ img, name, email, job, online, date }, idx) => {
                   const className = `py-3 px-5 ${
-                    key === authorsTableData.length - 1
+                    idx === data.length - 1
                       ? ""
                       : "border-b border-blue-gray-50"
                   }`;
 
                   return (
-                    <tr key={name}>
+                    <tr key={name + idx}>
+                      {/* Author */}
                       <td className={className}>
                         <div className="flex items-center gap-4">
-                          <Avatar src={img} alt={name} size="sm" variant="rounded" />
+                          <img
+                            src={img}
+                            alt={name}
+                            className="w-10 h-10 rounded-md object-cover"
+                          />
+
                           <div>
                             <Typography
                               variant="small"
-                              color="blue-gray"
-                              className="font-semibold"
+                              className="font-semibold text-blue-gray-700"
                             >
                               {name}
                             </Typography>
-                            <Typography className="text-xs font-normal text-blue-gray-500">
+
+                            <Typography className="text-xs text-blue-gray-500">
                               {email}
                             </Typography>
                           </div>
                         </div>
                       </td>
+
+                      {/* Job */}
                       <td className={className}>
-                        <Typography className="text-xs font-semibold text-blue-gray-600">
+                        <Typography className="text-xs font-semibold text-blue-gray-700">
                           {job[0]}
                         </Typography>
-                        <Typography className="text-xs font-normal text-blue-gray-500">
+                        <Typography className="text-xs text-blue-gray-500">
                           {job[1]}
                         </Typography>
                       </td>
+
+                      {/* Status */}
                       <td className={className}>
                         <Chip
                           variant="gradient"
-                          color={online ? "green" : "blue-gray"}
+                          color={online ? "green" : "red"}
                           value={online ? "online" : "offline"}
                           className="py-0.5 px-2 text-[11px] font-medium w-fit"
                         />
                       </td>
+
+                      {/* Employed date */}
                       <td className={className}>
-                        <Typography className="text-xs font-semibold text-blue-gray-600">
+                        <Typography className="text-xs font-semibold text-blue-gray-700">
                           {date}
                         </Typography>
                       </td>
+
+                      {/* Edit */}
                       <td className={className}>
                         <Typography
                           as="a"
@@ -120,14 +150,14 @@ const ServiceCategory = () => {
                       </td>
                     </tr>
                   );
-                }
-              )}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
+          )}
         </CardBody>
       </Card>
     </div>
-  )
-}
+  );
+};
 
-export default ServiceCategory
+export default ServiceCategory;
