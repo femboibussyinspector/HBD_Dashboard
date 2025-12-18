@@ -21,7 +21,7 @@ import { Notifications } from "./pages/dashboard/notifications";
 
 // IMPORT: Loading your cities report component
 import CitiesReports from "./componunts/Reports/cities_reports";
-
+import CategoriesReports from "./componunts/Reports/categories_reports";
 import BusinessCategory from "./componunts/masterdata/BusinessCategory";
 import ServiceCategory from "./componunts/masterdata/ServiceCategory";
 import ProductCategory from "./componunts/masterdata/ProductCategory";
@@ -102,6 +102,11 @@ export const routes = [
         // ROUTE: This maps the dashboard button to your new page
         path: "/cities-report",
         element: <CitiesReports />,
+        hidden: true,
+      },
+      {
+        path: "/categories-report",
+        element: <CategoriesReports />,
         hidden: true,
       },
       {
