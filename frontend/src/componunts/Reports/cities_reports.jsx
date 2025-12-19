@@ -160,15 +160,14 @@ export function cities_reports() {
           <Button size="sm" onClick={() => downloadCSV(true)} variant="outlined" className="border-gray-900 text-gray-900">
             CSV Page
           </Button>
-          <Button size="sm" onClick={() => downloadExcel(false)} className="bg-green-600 text-white shadow-none hover:shadow-md">
+          <Button size="sm" onClick={() => downloadExcel(false)} className="bg-[#607d8b] text-white shadow-none hover:shadow-md">
             Excel All
           </Button>
         </div>
       </div>
 
-      <Card className="h-full w-full border border-gray-200 shadow-sm bg-white">
-        <CardHeader floated={false} shadow={false} className="rounded-none p-4 bg-gray-50 border-b border-gray-200">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+      <Card className="h-full w-full border border-gray-200 shadow-sm">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between m-5">
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               <div className="w-full sm:w-72">
                 <Select
@@ -223,6 +222,8 @@ export function cities_reports() {
               </div>
             </div>
           </div>
+        <CardHeader floated={false} shadow={false} className="rounded-none p-4  border-b border-gray-200">
+          
         </CardHeader>
 
         <CardBody className="p-0 overflow-x-auto">
