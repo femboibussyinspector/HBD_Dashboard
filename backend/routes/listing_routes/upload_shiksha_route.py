@@ -19,8 +19,10 @@ def upload_shiksha_route():
         UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
         paths = []
         for f in files:
+            print("Saving file:", f.filename)
             filename = secure_filename(f.filename)
             filepath = UPLOAD_DIR/filename
+            print("Saving to:", filepath)
             f.save(filepath)
             paths.append(str(filepath))
 

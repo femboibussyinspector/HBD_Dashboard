@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  web:
+    build: .
+    command: gunicorn app:app -b 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./tmp:/app/tmp
+    depends_on:
+      - redis
+
+  worker:
+    build: .
+    command: celery -A celery_app.celery worker --loglevel=info
+    env_file:
+      - .env
+    volumes:
+      - ./tmp:/app/tmp
+    depends_on:
+      - redis
