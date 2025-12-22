@@ -37,9 +37,11 @@ export function CitiesReports() {
   const [total, setTotal] = useState(0);
   const limit = 10;
 
-  // Initializing with empty string is crucial
+  // --- FILTER STATES ---
   const [selectedCity, setSelectedCity] = useState(""); 
+  const [selectedSource, setSelectedSource] = useState(""); // <--- NEW STATE
   const [categorySearch, setCategorySearch] = useState("");
+  
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc");
 
@@ -52,7 +54,7 @@ export function CitiesReports() {
     }, 300);
   }, []);
 
-  // 1. STRICT DATA CLEANING: Trim spaces to ensure exact matches
+  // 1. UNIQUE CITIES
   const uniqueCities = useMemo(() => {
     if (!fullData.length) return [];
     const cities = [
@@ -63,25 +65,44 @@ export function CitiesReports() {
     return cities.sort();
   }, [fullData]);
 
-  // 2. FILTER LOGIC
+  // 2. UNIQUE SOURCES (NEW)
+  const uniqueSources = useMemo(() => {
+    if (!fullData.length) return [];
+    const sources = [
+      ...new Set(
+        // Ensure your JSON has a 'source' key (e.g. "Google Maps", "Yelp")
+        fullData.map((item) => String(item.source || "").trim()).filter(Boolean)
+      ),
+    ];
+    return sources.sort();
+  }, [fullData]);
+
+  // 3. FILTER LOGIC
   const filteredData = useMemo(() => {
     let data = [...fullData];
     
-    // Normalize values for comparison
     const normalize = (val) => String(val || "").toLowerCase().trim();
     const targetCity = normalize(selectedCity);
+    const targetSource = normalize(selectedSource); // <--- NEW
 
+    // Filter by City
     if (targetCity) {
       data = data.filter((x) => normalize(x.city) === targetCity);
     }
 
+    // Filter by Source
+    if (targetSource) {
+      data = data.filter((x) => normalize(x.source) === targetSource);
+    }
+
+    // Filter by Category Search
     if (categorySearch) {
       const s = normalize(categorySearch);
       data = data.filter((x) => normalize(x.category).includes(s));
     }
 
     return data;
-  }, [fullData, selectedCity, categorySearch]);
+  }, [fullData, selectedCity, selectedSource, categorySearch]);
 
   const sortedData = useMemo(() => {
     if (!sortField) return filteredData;
@@ -99,9 +120,10 @@ export function CitiesReports() {
     setTotal(sortedData.length);
   }, [sortedData, currentPage]);
 
+  // Reset page on filter change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCity, categorySearch]);
+  }, [selectedCity, selectedSource, categorySearch]);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -131,45 +153,68 @@ export function CitiesReports() {
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between m-5 overflow-visible">
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto overflow-visible">
               
-              {/* FIXED SELECT COMPONENT */}
-              <div className="w-full sm:w-72">
-              
+              {/* --- 1. CITY SELECT --- */}
+              <div className="w-full sm:w-64">
                 {!loading && uniqueCities.length > 0 ? (
                   <Select
                     label="Select City"
-                   
                     value={selectedCity} 
                     onChange={(val) => setSelectedCity(val)}
                     className="bg-white"
                     containerProps={{ className: "min-w-[100px]" }}
-                    
                     key={`city-select-${selectedCity || 'empty'}`} 
                   >
                       {uniqueCities.map((city) => (
-                        <Option key={city} value={city}>
-                          {city}
-                        </Option>
+                        <Option key={city} value={city}>{city}</Option>
                       ))}
                   </Select>
                 ) : (
-                   /* Placeholder while loading */
                    <div className="w-full h-10 border border-gray-200 rounded-lg bg-gray-50 flex items-center px-3 text-gray-400 text-sm">
-                      Loading cities...
+                      Loading...
                    </div>
                 )}
-                
-                {/* Clear Filter Button (Only shows when a city is selected) */}
                 {selectedCity && (
-                   <div 
-                     className="text-xs text-blue-600 font-bold cursor-pointer mt-1 text-right"
-                     onClick={() => setSelectedCity("")}
-                   >
-                     Clear Filter
+                   <div className="text-xs text-blue-600 font-bold cursor-pointer mt-1 text-right" onClick={() => setSelectedCity("")}>
+                     Clear
                    </div>
                 )}
               </div>
 
-              <div className="w-full sm:w-72">
+              {/* --- 2. SOURCE SELECT (NEW) --- */}
+              <div className="w-full sm:w-64">
+                {!loading ? (
+                  <Select
+                    label="Filter by Source"
+                    value={selectedSource} 
+                    onChange={(val) => setSelectedSource(val)}
+                    className="bg-white"
+                    containerProps={{ className: "min-w-[100px]" }}
+                    // Force re-render to prevent ghosting
+                    key={`source-select-${selectedSource || 'empty'}`} 
+                    disabled={uniqueSources.length === 0}
+                  >
+                      {uniqueSources.length > 0 ? (
+                        uniqueSources.map((src) => (
+                          <Option key={src} value={src}>{src}</Option>
+                        ))
+                      ) : (
+                        <Option value="" disabled>No Sources Found</Option>
+                      )}
+                  </Select>
+                ) : (
+                   <div className="w-full h-10 border border-gray-200 rounded-lg bg-gray-50 flex items-center px-3 text-gray-400 text-sm">
+                      Loading...
+                   </div>
+                )}
+                {selectedSource && (
+                   <div className="text-xs text-blue-600 font-bold cursor-pointer mt-1 text-right" onClick={() => setSelectedSource("")}>
+                     Clear
+                   </div>
+                )}
+              </div>
+
+              {/* --- 3. CATEGORY SEARCH --- */}
+              <div className="w-full sm:w-64">
                 <Input
                   label="Search Category..."
                   value={categorySearch}
