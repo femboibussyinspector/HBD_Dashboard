@@ -3,7 +3,7 @@ import {
   UserCircleIcon,
   TableCellsIcon,
   InformationCircleIcon,
-  ServerStackIcon,
+  ServerStackIcon, // <--- 1. Added Icon for Manager
   RectangleStackIcon,
   MagnifyingGlassIcon,
   MapPinIcon,
@@ -84,6 +84,9 @@ import FreelistingUploader from "./componunts/data import/FreelistingUploader";
 import PostOfficeUploader from "./componunts/data import/PostOfficeUploader";
 import ShikshaUploader from "./componunts/data import/ShikshaUploader";
 import ShikshaData from "./componunts/listing master data/ShikshaData";
+
+// --- 2. Added Scraper Manager Import (Based on your previous file location) ---
+import { ScraperManager } from "./layouts/Scrapper_manager";
 
 const icon = {
   className: "w-5 h-5 text-inherit",
@@ -249,7 +252,6 @@ export const routes = [
         icon: <TableCellsIcon {...icon} />,
         name: "Clean Master Data",
         children: [
-
           {
             icon: <TableCellsIcon {...icon} />,
             name: "Listing Master",
@@ -301,7 +303,7 @@ export const routes = [
           {
             icon: <TableCellsIcon {...icon} />,
             name: "Listing Category",
-            paht: "/masterdata/listing-category",
+            path: "/masterdata/listing-category", // Fixed 'paht' typo from original code
             element: <ListingCategory />,
           },
           {
@@ -492,6 +494,15 @@ export const routes = [
           },
         ],
       },
+      
+      // --- 3. Scraper Manager Route Added Here ---
+      {
+        icon: <ServerStackIcon {...icon} />,
+        name: "Scraper Manager",
+        path: "/scrapper-manager",
+        element: <ScraperManager />,
+      },
+      
       {
         icon: <MagnifyingGlassIcon {...icon} />,
         name: "Scrapper",
