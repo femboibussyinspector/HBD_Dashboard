@@ -1,5 +1,78 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+
+export const citiesList = [
+  "Delhi",
+  "New Delhi",
+  "Gurugram",
+  "Noida",
+  "Ghaziabad",
+  "Faridabad",
+  "Chandigarh",
+  "Lucknow",
+  "Kanpur",
+  "Varanasi",
+  "Prayagraj",
+  "Jaipur",
+  "Jodhpur",
+  "Udaipur",
+  "Kota",
+  "Amritsar",
+  "Ludhiana",
+  "Jalandhar",
+  "Srinagar",
+  "Jammu",
+
+  "Mumbai",
+  "Thane",
+  "Navi Mumbai",
+  "Pune",
+  "Nagpur",
+  "Nashik",
+  "Aurangabad",
+  "Ahmedabad",
+  "Surat",
+  "Vadodara",
+  "Rajkot",
+  "Bhavnagar",
+  "Jamnagar",
+  "Gandhinagar",
+  "Indore",
+  "Bhopal",
+
+  "Bengaluru",
+  "Chennai",
+  "Hyderabad",
+  "Kochi",
+  "Thiruvananthapuram",
+  "Coimbatore",
+  "Madurai",
+  "Mysuru",
+  "Vijayawada",
+  "Visakhapatnam",
+  "Tirupati",
+
+
+  "Kolkata",
+  "Howrah",
+  "Bhubaneswar",
+  "Cuttack",
+  "Ranchi",
+  "Patna",
+  "Guwahati",
+  "Agartala",
+  "Shillong",
+
+  "Raipur",
+  "Bilaspur",
+  "Jabalpur",
+  "Gwalior",
+  "Dehradun",
+  "Haridwar",
+  "Rishikesh",
+];
+
+
 import {
   Button,
   Card,
@@ -55,6 +128,10 @@ export function cities_reports() {
   const [sortOrder, setSortOrder] = useState("asc");
 
   const [columns] = useState(defaultColumns);
+  const selectedCityCount = selectedCity
+  ? fullData.filter((x) => x.city === selectedCity).length
+  : fullData.length;
+
 
   useEffect(() => {
     setLoading(true);
@@ -167,7 +244,7 @@ export function cities_reports() {
       </div>
 
       <Card className="h-full w-full border border-gray-200 shadow-sm">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between m-5">
+        <div className="flex justify-between flex-col md:flex-row gap-4 items-center m-5">
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               <div className="w-full sm:w-72">
                 <Select
@@ -177,7 +254,7 @@ export function cities_reports() {
                   className="bg-white"
                 >
                     <Option value="">All Cities</Option>
-                    {uniqueCities.map((city) => (
+                    {citiesList.map((city) => (
                       <Option key={city} value={city}>
                         {city}
                       </Option>
@@ -185,7 +262,7 @@ export function cities_reports() {
                 </Select>
               </div>
 
-              <div className="w-full sm:w-72">
+              <div className="sm:w-72">
                 <Input
                   label="Search Category..."
                   value={categorySearch}
@@ -195,36 +272,17 @@ export function cities_reports() {
                 />
               </div>
             </div>
-
-            <div className="flex gap-2 items-center text-sm font-medium text-gray-600">
-              <span>
-                Page {currentPage} of {totalPages}
-              </span>
-              <div className="flex gap-1">
-                <Button
-                  size="sm"
-                  variant="text"
-                  className="p-2 rounded-full hover:bg-gray-200"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => p - 1)}
-                >
-                  <ChevronDownIcon className="h-4 w-4 rotate-90" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="text"
-                  className="p-2 rounded-full hover:bg-gray-200"
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => p + 1)}
-                >
-                  <ChevronDownIcon className="h-4 w-4 -rotate-90" />
-                </Button>
+              <div className="w-55">
+                 <div className="border uppercase text-sm bg-white font-semibold text-[#263238] shadow-none hover:shadow-md border-gray-400 rounded-md px-4 py-2 text-[0.950rem]">
+                  {
+                    selectedCity ? `${selectedCity}: ${selectedCityCount} listings`: `All Cities: ${selectedCityCount} listings`
+                  }
+                 </div>
+                
+                
               </div>
-            </div>
-          </div>
-        <CardHeader floated={false} shadow={false} className="rounded-none p-4  border-b border-gray-200">
-          
-        </CardHeader>
+        </div>
+
 
         <CardBody className="p-0 overflow-x-auto">
           {loading ? (

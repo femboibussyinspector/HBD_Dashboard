@@ -14,7 +14,10 @@ import {
   ServerStackIcon,
   GlobeAmericasIcon,
   ChartBarIcon,
+  ClockIcon,
 } from "@heroicons/react/24/solid";
+import SlotCounter from "react-slot-counter";
+
 import api from "../utils/Api";
 
 export function Dasboard2() {
@@ -24,6 +27,9 @@ export function Dasboard2() {
     categoryCount: 0,
     loading: true,
   });
+  const [displayTotal, setDisplayTotal] = useState(0);
+
+  
 
   const staticData = {
     totalScrapped: 1200000,
@@ -100,30 +106,19 @@ export function Dasboard2() {
             <ServerStackIcon className="h-10 w-10 text-gray-900" />
           </div>
           <Typography variant="h1" color="blue-gray" className="mb-2 font-black tracking-tighter text-6xl">
-             {(staticData.totalScrapped + stats.productCount).toLocaleString()}
+             <SlotCounter
+               value={staticData.totalScrapped + stats.productCount}
+               duration={1} 
+               autoStart
+               startValue={0}
+               animateOnVisible
+             />
           </Typography>
           <Typography variant="h6" className="font-bold text-gray-400 uppercase tracking-[0.2em] text-xs">
             total aggregated data
           </Typography>
         </CardBody>
       </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <DashboardCard
-          title="Cities Scrapped"
-          value={stats.cityCount}
-          icon={MapPinIcon}
-          color="from-gray-400 to-gray-600"
-          link="/dashboard/cities-report"
-        />
-        <DashboardCard
-          title="Categories Scrapped"
-          value={stats.categoryCount}
-          icon={TagIcon}
-          color="from-gray-400 to-gray-600"
-          link="/dashboard/categories-report"
-        />
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <DashboardCard
@@ -144,6 +139,39 @@ export function Dasboard2() {
           link="/dashboard/listingdata-report"
         />
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <DashboardCard
+          title="Cities Scrapped"
+          value={stats.cityCount}
+          icon={MapPinIcon}
+          color="from-gray-400 to-gray-600"
+          link="/dashboard/cities-report"
+        />
+        <DashboardCard
+          title="Categories Scrapped"
+          value={stats.categoryCount}
+          icon={TagIcon}
+          color="from-gray-400 to-gray-600"
+          link="/dashboard/categories-report"
+        />
+        <DashboardCard
+          title="Cities Pending"
+          value={stats.categoryCount}
+          icon={ClockIcon}
+          color="from-gray-400 to-gray-600"
+          link="/dashboard/categories-report"
+        />
+        <DashboardCard
+          title="Categories Pending"
+          value={stats.categoryCount}
+          icon={ClockIcon}
+          color="from-gray-400 to-gray-600"
+          link="/dashboard/categories-report"
+        />
+      </div>
+
+      
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border border-gray-200 bg-gradient-to-br from-white to-gray-500/30">
