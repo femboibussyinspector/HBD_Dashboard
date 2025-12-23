@@ -193,20 +193,24 @@ const CleanListingMaster = () => {
             <select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
-              className="border rounded px-3 py-2 bg-white text-sm"
+              className="border rounded px-3 py-2 bg-gray-100 text-sm"
             >
               <option value="">All Sources</option>
-              <option value="justdial"></option>
-              <option value="justdial"></option>
-              <option value="justdial"></option>
-              <option value="justdial"></option>
-              <option value="justdial"></option>
-              <option value="justdial"></option>
-              <option value="justdial"></option>
-              <option value="justdial"></option>
-              <option value="justdial"></option>
-              <option value="justdial"></option>
-              <option value="justdial"></option>
+              <option value="asklaila">Asklaila</option>
+              <option value="atm">ATM</option>
+              <option value="bank">Bank</option>
+              <option value="college-dunia">CollegeDunia</option>
+              <option value="google">Google</option>
+              <option value="google-maps">Google Maps</option>
+              <option value="hey-places">HeyPlaces</option>
+              <option value="just-dial">JustDial</option>
+              <option value="magicpin">MagicPin</option>
+              <option value="nearbuy">Near Buy</option>
+              <option value="pinda">Pinda</option>
+              <option value="post-office-india">Post Office India</option>
+              <option value="schoolgis">Schoolgis</option>
+              <option value="shiksha">Shiksha</option>
+              <option value="yellow-pages">Yellow Pages</option>
             </select>
           </div>
 
