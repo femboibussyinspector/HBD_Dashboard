@@ -1,219 +1,186 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  Button,
   Card,
   CardBody,
-  CardHeader,
   Typography,
-  Input,
-  Spinner,
-  Select,
-  Option,
 } from "@material-tailwind/react";
-import {
-  MagnifyingGlassIcon,
-  ChevronUpDownIcon,
-  RectangleGroupIcon,
-} from "@heroicons/react/24/solid";
-import { listingData } from "@/data/listingJSON"; 
-import * as XLSX from "xlsx/dist/xlsx.full.min.js";
-
-const defaultColumns = [
-  { key: "name", label: "Name", width: 220 },
-  { key: "category", label: "Category", width: 160 },
-  { key: "subcategory", label: "Sub-Category", width: 160 },
-  { key: "address", label: "Address", width: 300 },
-  { key: "phone_number", label: "Contact", width: 140 },
-  { key: "city", label: "City", width: 140 },
-];
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { listingData } from "@/data/listingJSON";
 
 export function CategoriesReports() {
-  const [loading, setLoading] = useState(true);
-  const [fullData, setFullData] = useState([]);
-  const [pageData, setPageData] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const limit = 10;
+  const [selectedCity, setSelectedCity] = useState("All"); 
+  const [categorySearch, setCategorySearch] = useState("");
 
-  const [selectedCategory, setSelectedCategory] = useState(""); 
-  const [citySearch, setCitySearch] = useState("");
-  const [sortField, setSortField] = useState(null);
-  const [sortOrder, setSortOrder] = useState("asc");
-
-  useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setFullData(listingData);
-      setLoading(false);
-    }, 300);
+  // 1. Get List of Unique Cities for the Header Dropdown
+  const uniqueCities = useMemo(() => {
+    return [...new Set(listingData.map((item) => item.city))].filter(Boolean).sort();
   }, []);
 
+  // 2. Get List of Unique Categories (Rows)
   const uniqueCategories = useMemo(() => {
-    const categories = [...new Set(fullData.map((item) => item.category).filter(Boolean))];
-    return categories.sort();
-  }, [fullData]);
+    return [...new Set(listingData.map((item) => item.category))].filter(Boolean).sort();
+  }, []);
 
-  const filteredData = useMemo(() => {
-    let data = [...fullData];
-    const safeValue = (value) => String(value ?? "").toLowerCase();
-    if (selectedCategory) data = data.filter((x) => safeValue(x.category) === selectedCategory.toLowerCase());
-    if (citySearch) data = data.filter((x) => safeValue(x.city).includes(citySearch.toLowerCase()));
-    return data;
-  }, [fullData, selectedCategory, citySearch]);
-
-  const sortedData = useMemo(() => {
-    if (!sortField) return filteredData;
-    return [...filteredData].sort((a, b) => {
-      const A = String(a[sortField] ?? "").toLowerCase();
-      const B = String(b[sortField] ?? "").toLowerCase();
-      if (A === B) return 0;
-      return sortOrder === "asc" ? (A > B ? 1 : -1) : (A < B ? 1 : -1);
-    });
-  }, [filteredData, sortField, sortOrder]);
-
-  useEffect(() => {
-    const start = (currentPage - 1) * limit;
-    setPageData(sortedData.slice(start, start + limit));
-  }, [sortedData, currentPage]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / limit));
-
-  const toggleSort = (field) => {
-    if (sortField === field) {
-      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortOrder("asc");
+  // 3. Process Rows: Filter Categories -> Calculate Count for Selected City
+  const tableRows = useMemo(() => {
+    // A. Filter categories based on search input
+    let categories = uniqueCategories;
+    if (categorySearch) {
+      categories = categories.filter(cat => 
+        cat.toLowerCase().includes(categorySearch.toLowerCase())
+      );
     }
-  };
+
+    // B. Map to row data
+    return categories.map(category => {
+      // Calculate count for this Category AND the selected City
+      const count = listingData.filter(item => 
+        item.category === category && 
+        (selectedCity === "All" ? true : item.city === selectedCity)
+      ).length;
+
+      return {
+        category,
+        city: selectedCity === "All" ? "All Cities" : selectedCity,
+        count
+      };
+    });
+  }, [uniqueCategories, categorySearch, selectedCity]);
+
+  // --- STYLING (Light Professional Theme) ---
+  const headerInputClass = "w-full bg-white text-gray-700 placeholder-gray-400 border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-gray-100 focus:border-blue-gray-300 transition-all shadow-sm";
+  const headerSelectClass = "w-full bg-white text-gray-800 border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-gray-100 focus:border-blue-gray-300 cursor-pointer font-bold uppercase shadow-sm";
 
   return (
-    <div className="min-h-screen mt-8 mb-12 px-4 rounded bg-[#F8FAFC]">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-white shadow-sm rounded-xl border border-gray-200">
-            <RectangleGroupIcon className="h-6 w-6 text-gray-600" />
-          </div>
-          <div>
-            <Typography variant="h4" color="blue-gray" className="font-bold tracking-tight">
-              Categories Report
-            </Typography>
-            <Typography variant="small" className="font-medium text-gray-500">
-              Analyzing records by industry classification
-            </Typography>
-          </div>
-        </div>
+    <div className="mt-8 mb-12 px-4 max-w-5xl mx-auto">
+      
+      <div className="mb-4">
+        <Typography variant="h4" color="blue-gray" className="font-bold">
+          Category Data Grid
+        </Typography>
+        <Typography variant="small" className="text-gray-500">
+          Analyze listing distribution by industry category.
+        </Typography>
       </div>
 
-      {/* Main Card - Removed overflow-hidden to let dropdown breathe */}
-      <Card className="h-full w-full border border-gray-200 shadow-sm bg-white overflow-visible">
-        <CardHeader 
-          floated={false} 
-          shadow={false} 
-          className="rounded-none p-6 bg-white border-b border-gray-100 overflow-visible"
-        >
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between overflow-visible">
-            {/* Filter Container with high z-index */}
-            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto relative z-50">
-              <div className="w-full sm:w-80">
-                <Select 
-                  label="Filter by Category" 
-                  value={selectedCategory} 
-                  onChange={(val) => setSelectedCategory(val)} 
-                  className="bg-white border-gray-300"
-                  menuProps={{ className: "z-[9999]" }} // Ensures menu is above everything
-                >
-                  <Option value="">All Categories</Option>
-                  {uniqueCategories.map((cat) => (
-                    <Option key={cat} value={cat}>{cat}</Option>
-                  ))}
-                </Select>
-              </div>
-              <div className="w-full sm:w-80">
-                <Input 
-                  label="Search by City..." 
-                  value={citySearch} 
-                  onChange={(e) => setCitySearch(e.target.value)} 
-                  icon={<MagnifyingGlassIcon className="h-5 w-5" />} 
-                  className="bg-white !border-gray-300 focus:!border-gray-900" 
-                />
-              </div>
-            </div>
+      <Card className="border border-gray-300 shadow-sm overflow-hidden rounded-lg">
+        <CardBody className="p-0 overflow-visible">
+          <table className="w-full text-left table-fixed border-collapse">
             
-            <div className="bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
-               <Typography className="text-xs font-bold text-gray-500 uppercase">
-                 Found: <span className="text-gray-900 ml-1">{filteredData.length}</span>
-               </Typography>
-            </div>
-          </div>
-        </CardHeader>
-        
-        <CardBody className="p-0 overflow-x-auto relative z-10">
-          {loading ? (
-            <div className="flex justify-center py-24">
-              <Spinner className="h-10 w-10 text-gray-400" />
-            </div>
-          ) : (
-            <table className="w-full table-fixed border-collapse min-w-[1000px] text-left">
-              <thead className="border-b border-gray-100 bg-gray-50/50">
-                <tr>
-                  {defaultColumns.map((col) => (
-                    <th 
-                      key={col.key} 
-                      style={{ width: col.width }} 
-                      className="px-6 py-4 cursor-pointer hover:bg-gray-100/50 transition-colors" 
-                      onClick={() => toggleSort(col.key)}
+            {/* --- PROFESSIONAL LIGHT HEADER --- */}
+            <thead className="bg-gradient-to-b from-white to-gray-100 border-b border-gray-300">
+              <tr>
+                
+                {/* COL 1: CATEGORY FILTER (Search) */}
+                <th className="px-4 py-3 w-1/3 align-top border-r border-gray-200">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1">
+                      Filter Category
+                    </span>
+                    <div className="relative">
+                        <MagnifyingGlassIcon className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            value={categorySearch}
+                            onChange={(e) => setCategorySearch(e.target.value)}
+                            className={`${headerInputClass} pl-8`}
+                        />
+                    </div>
+                  </div>
+                </th>
+
+                {/* COL 2: CITY DROPDOWN (The Pivot) */}
+                <th className="px-4 py-3 w-1/3 align-top border-r border-gray-200 bg-gray-50/50">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-gray-600">
+                      Select City ▼
+                    </span>
+                    <select
+                      value={selectedCity}
+                      onChange={(e) => setSelectedCity(e.target.value)}
+                      className={headerSelectClass}
                     >
-                      <div className="flex items-center justify-between text-[11px] font-bold uppercase text-gray-500 tracking-wider">
-                        <span>{col.label}</span>
-                        <ChevronUpDownIcon className={`h-4 w-4 ${sortField === col.key ? 'text-gray-900' : 'text-gray-300'}`} />
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="text-sm text-gray-700">
-                {pageData.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-20 text-gray-400 italic">No records found.</td></tr>
-                ) : (
-                  pageData.map((row, idx) => (
-                    <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50/30 transition-colors">
-                      {defaultColumns.map((col) => (
-                        <td key={col.key} className="px-6 py-4 break-words align-top text-gray-600">
-                          {col.key === "name" ? <span className="font-bold text-gray-900">{row[col.key]}</span> : row[col.key] || "-"}
-                        </td>
+                      <option value="All">All Cities</option>
+                      {uniqueCities.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
                       ))}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
+                    </select>
+                  </div>
+                </th>
+
+                {/* COL 3: COUNT LABEL */}
+                <th className="px-4 py-3 w-1/3 align-middle">
+                   <div className="flex flex-col items-center justify-center h-full">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                      Total Listings
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-normal mt-0.5">
+                      (Live Updates)
+                    </span>
+                   </div>
+                </th>
+
+              </tr>
+            </thead>
+
+            {/* --- TABLE BODY --- */}
+            <tbody className="text-sm text-gray-700 bg-white">
+              {tableRows.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-6 py-12 text-center text-gray-400 italic bg-gray-50">
+                    No categories found matching "{categorySearch}"
+                  </td>
+                </tr>
+              ) : (
+                tableRows.map((row) => (
+                  <tr 
+                    key={row.category} 
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                  >
+                    {/* Category Name */}
+                    <td className="px-4 py-3 font-semibold text-gray-900 border-r border-gray-100">
+                      {row.category}
+                    </td>
+
+                    {/* City Name (Repeats based on selection) */}
+                    <td className="px-4 py-3 text-gray-500 border-r border-gray-100 bg-gray-50/30">
+                      {row.city}
+                    </td>
+
+                    {/* Count */}
+                    <td className="px-4 py-3 text-center">
+                        <span className={`inline-block px-3 py-1 rounded-full font-bold text-xs border ${
+                            row.count > 0 
+                            ? "bg-gray-100 text-gray-800 border-gray-200" 
+                            : "bg-transparent text-gray-300 border-transparent"
+                        }`}>
+                           {row.count}
+                        </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            
+            {/* FOOTER */}
+            <tfoot className="bg-gray-50 font-bold text-gray-800 border-t border-gray-300">
+                <tr>
+                    <td className="px-4 py-2.5 text-xs uppercase text-gray-500">
+                        Total Rows: {tableRows.length}
+                    </td>
+                    <td className="px-4 py-2.5 border-l border-gray-200"></td>
+                    <td className="px-4 py-2.5 text-center border-l border-gray-200 text-blue-gray-900">
+                        {tableRows.reduce((sum, row) => sum + row.count, 0)}
+                    </td>
+                </tr>
+            </tfoot>
+
+          </table>
         </CardBody>
       </Card>
-
-      {/* Pagination */}
-      <div className="mt-8 flex justify-center items-center gap-2">
-        <Button
-          variant="text"
-          className="normal-case font-bold text-gray-600"
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          disabled={currentPage === 1}
-        >
-          Previous
-        </Button>
-        <Typography variant="small" className="font-bold text-gray-500 px-4">
-          Page {currentPage} of {totalPages}
-        </Typography>
-        <Button
-          variant="text"
-          className="normal-case font-bold text-gray-600"
-          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          disabled={currentPage === totalPages}
-        >
-          Next
-        </Button>
-      </div>
     </div>
   );
 }
