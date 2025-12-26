@@ -1,5 +1,4 @@
 // import { chartsConfig } from "@/configs";
-import { filter, values } from "lodash";
 import { chartsConfig } from "../configs/charts-config";
 
 const dataScrapped = {
@@ -23,6 +22,19 @@ const dataScrapped = {
     xaxis: {
       ...chartsConfig.xaxis,
       categories: ["D-Mart", "Amazon", "Google Map"],
+      labels: {
+        formatter: function(val) {
+          if(window.innerWidth < 480){
+            const mapping = {
+              "D-Mart": "DM",
+              "Amazon": "DM",
+              "Google Map": "G-Map",
+            };
+            return mapping[val] || val;
+          }
+          return val;
+        }
+      },
     },
   },
 };
@@ -48,6 +60,19 @@ const scrappingTrend = {
     xaxis: {
       ...chartsConfig.xaxis,
       categories: ["D-Mart", "Amazon", "Google Map"],
+      labels: {
+        formatter: function(val) {
+          if(window.innerWidth < 480){
+            const mapping = {
+              "D-Mart": "DM",
+              "Amazon": "DM",
+              "Google Map": "G-Map",
+            };
+            return mapping[val] || val;
+          }
+          return val;
+        }
+      },
     },
   },
 };
