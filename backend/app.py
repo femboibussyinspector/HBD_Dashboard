@@ -851,6 +851,9 @@ from routes.listing_routes.upload_post_office_route import post_office_bp
 from routes.listing_routes.upload_schoolgis_route import schoolgis_bp
 from routes.listing_routes.upload_shiksha_route import shiksha_bp
 from routes.listing_routes.upload_yellow_pages_route import yellow_pages_bp
+from routes.product_routes.upload_amazon_products_route import amazon_bp
+from routes.product_routes.upload_vivo_route import vivo_bp
+from routes.product_routes.upload_big_basket_route import upload_big_basket_route
 
 blueprints_listing = [(asklaila_bp, "/asklaila"),
     (atm_bp, "/atm"),
@@ -868,6 +871,8 @@ blueprints_listing = [(asklaila_bp, "/asklaila"),
     (schoolgis_bp, "/schoolgis"),
     (shiksha_bp, "/shiksha"),
     (yellow_pages_bp, "/yellow-pages"),
+    (amazon_bp,"/amazon"),
+    (vivo_bp,"/vivo"),
     ]
 
 for bp,prefix in blueprints_listing:

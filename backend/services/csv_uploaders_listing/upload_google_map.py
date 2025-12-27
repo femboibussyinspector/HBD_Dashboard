@@ -1,6 +1,8 @@
 import pandas as pd
 from database.mysql_connection import get_mysql_connection
 from utils.safe_get import safe_get
+from utils.drop_non_essential_indexes import drop_non_essential_indexes
+from utils.create_non_essential_indexes import create_non_essential_indexes
 
 def upload_google_map_data(file_paths):
     if not file_paths:
@@ -9,7 +11,7 @@ def upload_google_map_data(file_paths):
     cursor = connection.cursor()
     inserted = 0
     batch_size = 10000
-
+    upload_success = False
     try:
         for file in file_paths:
             with open(file,newline='',encoding='utf-8') as f:  
@@ -213,9 +215,15 @@ def upload_google_map_data(file_paths):
                             share_link_organization_id = VALUES(share_link_organization_id) ,
                             embed_map_code = VALUES(embed_map_code)
                     '''
-                    cursor.executemany(upload_google_map_data_query,chunk_data)
-                    connection.commit()
-                    inserted+=len(chunk_data)
+                    try:
+                        cursor.executemany(upload_google_map_data_query,chunk_data)
+                        connection.commit()
+                        inserted+=len(chunk_data)
+                    except Exception:
+                        print("roll error")
+                        connection.rollback()
+                        raise 
+        # upload_success = True
         return inserted
     finally:
         cursor.close()

@@ -7,7 +7,7 @@ from utils.storage import get_upload_base_dir
 freelisting_bp = Blueprint('freelisting_bp',__name__)
 @freelisting_bp.route('/upload/freelisting-data', methods=["POST"])
 def upload_freelisting_route():
-    files = request.files.getlist("file")
+    files = request.files.getlist("files")
     if not files:
         return jsonify({"error":"No files provided"}),400
     UPLOAD_DIR = get_upload_base_dir()/"freelisting"

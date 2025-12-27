@@ -6,9 +6,12 @@ import os
 def process_post_office_task(self,file_paths):
     if not file_paths:
         raise ValueError("No file provided")
-    try:
-        return upload_post_office_data(file_paths)
-    finally:
-        for path in file_paths:
+    result = upload_post_office_data(file_paths)
+
+    for path in file_paths:
+        try:
             if os.path.exists(path):
                 os.remove(path)
+        except PermissionError:
+            pass
+    return result

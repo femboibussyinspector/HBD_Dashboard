@@ -1,6 +1,8 @@
 import pandas as pd
 from database.mysql_connection import get_mysql_connection
 from utils.safe_get import safe_get
+from utils.drop_non_essential_indexes import drop_non_essential_indexes
+from utils.create_non_essential_indexes import create_non_essential_indexes
 
 def upload_college_dunia_data(file_paths):
 
@@ -10,6 +12,7 @@ def upload_college_dunia_data(file_paths):
     cursor = connection.cursor()
     inserted = 0
     batch_size = 10000
+    upload_success = False
 
     try:
         for file in file_paths:
@@ -56,9 +59,15 @@ def upload_college_dunia_data(file_paths):
                             email = VALUES(email),
                             requirement = VALUES(requirement);
                         '''
-                    cursor.executemany(insert_query, chunk_data)
-                    connection.commit()
-                    inserted+=len(chunk_data)
+                    try:
+                        cursor.executemany(insert_query,chunk_data)
+                        connection.commit()
+                        inserted+=len(chunk_data)
+                    except Exception:
+                        print("roll error")
+                        connection.rollback()
+                        raise 
+        # upload_success = True
         return inserted
     finally:
         cursor.close()

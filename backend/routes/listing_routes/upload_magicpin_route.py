@@ -8,7 +8,7 @@ from utils.storage import get_upload_base_dir
 magicpin_bp = Blueprint('magicpin_bp', __name__)
 @magicpin_bp.route('/upload/magicpin-data', methods=["POST"])
 def upload_magicpin_route():
-    files = request.files.getlist("file")
+    files = request.files.getlist("files")
     if not files:
         return jsonify({"error":"No files provided"}),400
     UPLOAD_DIR = get_upload_base_dir()/"magicpin"

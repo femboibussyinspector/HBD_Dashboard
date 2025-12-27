@@ -7,7 +7,7 @@ from utils.storage import get_upload_base_dir
 justdial_bp = Blueprint('justdial_bp', __name__)
 @justdial_bp.route('/upload/justdial-data', methods=["POST"])
 def upload_justdial_route():
-    files = request.files.getlist("file")
+    files = request.files.getlist("files")
     if not files:
         return jsonify({"error":"No files provided"}),400
     UPLOAD_DIR = get_upload_base_dir()/"justdial"

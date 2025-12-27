@@ -7,7 +7,7 @@ from utils.storage import get_upload_base_dir
 google_map_scrape_bp = Blueprint('google_map_scrape_bp',__name__)
 @google_map_scrape_bp.route('/upload/google-map-scrape-data', methods=["POST"])
 def upload_google_map_scrape_route():
-    files = request.files.getlist("file")
+    files = request.files.getlist("files")
     if not files:
         return jsonify({"error":"No files provided"}),400
     UPLOAD_DIR = get_upload_base_dir()/"google_map_scrape"

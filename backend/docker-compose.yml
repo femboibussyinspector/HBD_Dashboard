@@ -3,23 +3,25 @@ services:
     image: redis:7
 
   web:
-    build:
-      context: /www/wwwroot/dashboard.cityhangaround.com/HBD_Dashboard/backend
-      dockerfile: Dockerfile
+    build: .
     command: gunicorn app:app -b 0.0.0.0:8000
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     volumes:
-      - /www/wwwroot/dashboard.cityhangaround.com/HBD_Dashboard/backend/tmp:/app/tmp
+      - uploads:/app/tmp/uploads
     depends_on:
       - redis
 
   worker:
-    build:
-      context: /www/wwwroot/dashboard.cityhangaround.com/HBD_Dashboard/backend
-      dockerfile: Dockerfile
+    build: .
     command: celery -A celery_app.celery worker --loglevel=info
+    env_file:
+      - .env
     volumes:
-      - /www/wwwroot/dashboard.cityhangaround.com/HBD_Dashboard/backend/tmp:/app/tmp
+      - uploads:/app/tmp/uploads
     depends_on:
       - redis
+volumes:
+  uploads:

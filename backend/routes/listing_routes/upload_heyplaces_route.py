@@ -7,7 +7,7 @@ from utils.storage import get_upload_base_dir
 heyplaces_bp = Blueprint('heyplaces_bp', __name__)
 @heyplaces_bp.route('/upload/heyplaces-data', methods=["POST"])
 def upload_heyplaces_route():
-    files = request.files.getlist("file")
+    files = request.files.getlist("files")
     if not files:
         return jsonify({"error":"No files provided"}),400
     UPLOAD_DIR = get_upload_base_dir()/"heyplaces"

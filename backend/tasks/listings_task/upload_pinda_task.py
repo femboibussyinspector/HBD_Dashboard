@@ -6,11 +6,13 @@ import os
 def process_pinda_task(self,file_paths):
 
     if not file_paths:
-        raise ValueError("No file paths provided to upload")
-    
-    try:
-        return upload_pinda_data(file_paths)
-    finally:
-        for file_path in file_paths:
-            if os.path.exists(file_path):
-                os.remove(file_path)
+        raise ValueError("No file provided")
+    result = upload_pinda_data(file_paths)
+
+    for path in file_paths:
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except PermissionError:
+            pass
+    return result

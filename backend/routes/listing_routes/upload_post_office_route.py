@@ -8,7 +8,7 @@ from utils.storage import get_upload_base_dir
 post_office_bp = Blueprint('post_office_bp', __name__)
 @post_office_bp.route('/upload/post-office-data', methods=["POST"])
 def upload_post_office_route():
-    files = request.files.getlist("file")
+    files = request.files.getlist("files")
     if not files:
         return jsonify({"error":"No files provided"}),400
     UPLOAD_DIR = get_upload_base_dir()/"post_office"

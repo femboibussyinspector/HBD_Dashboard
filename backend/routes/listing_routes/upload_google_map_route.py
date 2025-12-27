@@ -7,7 +7,7 @@ from utils.storage import get_upload_base_dir
 google_map_bp = Blueprint("google_map_bp",__name__)
 @google_map_bp.route("/upload/google-map-data",methods=["POST"])
 def upload_google_map_route():
-    files = request.files.getlist("file")
+    files = request.files.getlist("files")
     if not files:
         return jsonify({"error":"No files provided"}),400
     UPLOAD_DIR = get_upload_base_dir()/"google_map"

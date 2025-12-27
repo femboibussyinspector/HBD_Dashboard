@@ -6,9 +6,12 @@ import os
 def process_yellow_pages_task(self,file_paths):
     if not file_paths:
         raise ValueError("No file provided")
-    try:
-        return upload_yellow_pages_data
-    finally:
-        for path in file_paths:
+    result = upload_yellow_pages_data(file_paths)
+
+    for path in file_paths:
+        try:
             if os.path.exists(path):
                 os.remove(path)
+        except PermissionError:
+            pass
+    return result

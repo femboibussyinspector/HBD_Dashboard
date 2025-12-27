@@ -7,7 +7,7 @@ from utils.storage import get_upload_base_dir
 bank_bp = Blueprint('bank_bp', __name__)
 @bank_bp.route('/upload/bank-data', methods=['POST'])
 def upload_bank_route():
-    files = request.files.getlist("file")
+    files = request.files.getlist("files")
     if not files:
         return jsonify({"error":"No files provided"}),400
     UPLOAD_DIR = get_upload_base_dir()/"bank"
