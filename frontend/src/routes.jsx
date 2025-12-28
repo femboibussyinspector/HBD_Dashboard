@@ -106,6 +106,7 @@ import JioMartUploader from "./componunts/data import/product import/JioMartUplo
 import ZeptoUploader from "./componunts/data import/product import/ZeptoUploader";
 import { ScraperManager } from "./layouts/Scrapper_manager";
 import ZomatoUploader from "./componunts/data import/product import/ZomatoUploader";
+import { element } from "prop-types";
 
 const icon = {
   className: "w-5 h-5 text-inherit",
@@ -180,13 +181,90 @@ export const routes = [
                 path: "/data-imports/listing-data/asklaila",
                 element: <AsklailaUploader />,
               },
-              // ... rest of uploaders
               {
                 icon: <DocumentTextIcon {...icon} />,
-                name: "Post Offices",
-                path: "/data-imports/listing-data/postoffice",
+                name: "ATM",
+                path: "/data-imports/listing-data/atm",
+                element: <AtmUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Bank Data",
+                path: "/data-imports/listing-data/bank-data",
+                element: <BankDataUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "College Dunia",
+                path: "/data-imports/listing-data/college-dunia",
+                element: <CollegeDuniaUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Freelisting",
+                path: "/data-imports/listing-data/freelisting",
+                element: <FreelistingUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Google Maps",
+                path: "/data-imports/listing-data/google-maps",
+                element: <GoogleMapUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Google",
+                path: "/data-imports/listing-data/google",
+                element: <GoogleUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Hey Places",
+                path: "/data-imports/listing-data/hey-places",
+                element: <HeyPlacesUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Just Dial",
+                path: "/data-imports/listing-data/just-dial",
+                element: <JustdialUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "NearBuy",
+                path: "/data-imports/listing-data/nearbuy",
+                element: <NearbuyUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Pinda",
+                path: "/data-imports/listing-data/pinda",
+                element: <PindaUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Post Office",
+                path: "/data-imports/listing-data/post-office",
                 element: <PostOfficeUploader />,
               },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Schoolgis",
+                path: "/data-imports/listing-data/schoolgis",
+                element: <SchoolgisUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Shiksha",
+                path: "/data-imports/listing-data/shiksha",
+                element: <ShikshaUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Yellow Pages",
+                path: "/data-imports/listing-data/yellow-pages",
+                element: <YellowPagesUploader />,
+              }
             ],
           },
           {
@@ -199,7 +277,48 @@ export const routes = [
                 path: "/data-imports/product-data/amazon",
                 element: <AmazonUploader />,
               },
-              // ... rest of product uploaders
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "BigBasket",
+                path: "/data-imports/product-data/big-basket",
+                element: <BigBasketUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Blinkit",
+                path: "/data-imports/product-data/blinkit",
+                element: <BlinkitUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "D-Mart",
+                path: "/data-imports/product-data/d-mart",
+                element: <DMartUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Flipkart",
+                path: "/data-imports/product-data/flipkart",
+                element: <FlipkartUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "India Mart",
+                path: "/data-imports/product-data/india-mart",
+                element: <IndiaMartUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "JioMart",
+                path: "/data-imports/product-data/jio-mart",
+                element: <JioMartUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Zepto",
+                path: "/data-imports/product-data/zepto",
+                element: <ZeptoUploader />,
+              },
               {
                 icon: <DocumentTextIcon {...icon} />,
                 name: "Zomato",

@@ -68,7 +68,7 @@ const CollegeDuniaUploader = () => {
 
   return (
     <div className="p-6 max-w-xlg bg-white rounded-lg shadow mt-6">
-      <h2 className="text-xl font-bold mb-4">Upload Listing CSV Files</h2>
+      <h2 className="text-xl font-bold mb-4">Upload CollegeDunia CSV Files</h2>
 
       <form onSubmit={handleSubmit}>
         <input
