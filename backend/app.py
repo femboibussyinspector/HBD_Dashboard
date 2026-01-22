@@ -36,6 +36,7 @@ from model.amazon_product_model import AmazonProduct
 from model.googlemap_data import GooglemapData
 from model.item_csv_model import ItemData
 from model.master_table_model import MasterTable
+from model.upload_master_reports_model import UploadReport
 
 with app.app_context():
     db.create_all()
@@ -820,7 +821,7 @@ from routes.upload_item_csv import item_csv_bp
 app.register_blueprint(item_csv_bp)
 
 # complate incomplate data
-from routes.product_routes.amazon_product import amazon_products_bp
+from routes.amazon_product import amazon_products_bp
 app.register_blueprint(amazon_products_bp)
 
 # items data complate/incomplate

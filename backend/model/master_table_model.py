@@ -9,26 +9,26 @@ class MasterTable(db.Model):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     global_business_id = Column(String(100), index=True, unique=True, nullable=False)
-    business_id = Column(String(100), index=True, nullable=False)
-    business_name= Column(String(255), nullable=False)
+    business_id = Column(String(100), index=True, nullable=True)
+    business_name= Column(String(255), nullable=True)
     business_category= Column(String(100), index=True, nullable=True)
     business_subcategory= Column(String(100), nullable=True)
     ratings= Column(Float, nullable= True)
-    primary_phone = Column(String(20), nullable=False) #
+    primary_phone = Column(String(50), nullable=True) #
     secondary_phone= Column(String(20), nullable=True)
-    other_phones= Column(String(20), nullable=True)
+    other_phones= Column(String(255), nullable=True)
     virtual_phone= Column(String(20), nullable=True)
     whatsapp_phone= Column(String(20), nullable=True)
-    email= Column(String(255), index=True, nullable=False)  #
+    email= Column(String(255), index=True, nullable=True)  #
     website_url= Column(String(255), nullable=True) #
     facebook_url=Column(String(255), nullable=True)
     linkedin_url=Column(String(255), nullable=True)
     twitter_url=Column(String(255), nullable=True)
-    address=Column(String(255), nullable=False)
-    area=Column(String(100),index=True, nullable=True)
-    city=Column(String(50),index=True, nullable=False)
+    address=Column(Text, nullable=True)
+    area=Column(String(255),index=True, nullable=True)
+    city=Column(String(100),index=True, nullable=True)
     state=Column(String(50), nullable=False)
-    pincode= Column(String(10), nullable=False)
+    pincode= Column(String(10), nullable=True)
     country= Column(String(50), nullable=False, default='India') 
     latitude= Column(Float, nullable=True)
     longitude= Column(Float, nullable=True)
