@@ -1,180 +1,87 @@
-import React, { useEffect, useState } from "react";
-import {
-  Card,
-  CardBody,
-  Typography,
-  List,
-  ListItem,
-  ListItemPrefix,
-  Spinner,
-  Input,
-} from "@material-tailwind/react";
-import { MapPinIcon, FolderIcon, MagnifyingGlassIcon } from "@heroicons/react/24/solid";
-import axios from "axios";
-import api from "../utils/Api";
+import React, { useState } from 'react';
+// IMPORT PATH: Check this carefully. 
+// Screenshot ke hisab se ye file aur Table folder same jagah hain.
+import ReusableTable from './Table/ReusableTable'; 
 
-export default function ListingDataReport() {
-  const [areas, setAreas] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+const ListingDataReport = () => {
+  // 1. CONFIGURATION (Jo list tune di thi)
+  const columns = [
+    { header: 'Global Biz ID', accessor: 'global_business_id' },
+    { header: 'Business ID', accessor: 'business_id' },
+    { header: 'Business Name', accessor: 'business_name' }, // Ensure backend sends 'business_name' not 'business name'
+    { header: 'Category', accessor: 'business_category' },
+    { header: 'Subcategory', accessor: 'business_subcategory' },
+    { header: 'Ratings', accessor: 'ratings' },
+    { header: 'Primary Phone', accessor: 'primary_phone' },
+    { header: 'Secondary Phone', accessor: 'secondary_phone' },
+    { header: 'Other Phones', accessor: 'other_phones' },
+    { header: 'Virtual Phone', accessor: 'virtual_phone' },
+    { header: 'Whatsapp', accessor: 'whatsapp_phone' },
+    { header: 'Email', accessor: 'email' },
+    { 
+      header: 'Website', 
+      accessor: 'website_url',
+      render: (row) => row.website_url ? <a href={row.website_url} target="_blank" rel="noreferrer">Link</a> : '-'
+    },
+    { 
+      header: 'Facebook', 
+      accessor: 'facebook_url',
+      render: (row) => row.facebook_url ? <a href={row.facebook_url} target="_blank" rel="noreferrer">FB</a> : '-'
+    },
+    { 
+      header: 'LinkedIn', 
+      accessor: 'linkedin_url',
+      render: (row) => row.linkedin_url ? <a href={row.linkedin_url} target="_blank" rel="noreferrer">IN</a> : '-'
+    },
+    { 
+      header: 'Twitter', 
+      accessor: 'twitter_url',
+      render: (row) => row.twitter_url ? <a href={row.twitter_url} target="_blank" rel="noreferrer">TW</a> : '-'
+    },
+    { header: 'Address', accessor: 'address' },
+    { header: 'Area', accessor: 'area' },
+    { header: 'City', accessor: 'city' },
+    { header: 'State', accessor: 'state' },
+    { header: 'Pincode', accessor: 'pincode' },
+    { header: 'Country', accessor: 'country' },
+    { header: 'Latitude', accessor: 'latitude' },
+    { header: 'Longitude', accessor: 'longitude' },
+    { header: 'Avg Fees', accessor: 'avg_fees' },
+    { header: 'Course Details', accessor: 'course_details' },
+    { header: 'Duration', accessor: 'duration' },
+    { header: 'Requirement', accessor: 'requirement' },
+    { header: 'Avg Spent', accessor: 'avg_spent' },
+    { header: 'Cost for Two', accessor: 'cost_for_two' },
+    { header: 'Reviews', accessor: 'reviews' },
+    { header: 'Description', accessor: 'description' },
+    { header: 'Data Source', accessor: 'data_source' },
+    { header: 'Avg Salary', accessor: 'avg_salary' },
+    { header: 'Admission Req', accessor: 'admission_req_list' },
+    { header: 'Courses', accessor: 'courses' }
+  ];
 
-  const [areaSearch, setAreaSearch] = useState("");
-  const [categorySearch, setCategorySearch] = useState("");
-
- 
-  useEffect(() => {
-    setTimeout(() => {
-    fetchProductsData();
-     setLoading(false);
-    }, 1000);
-  }, []);
-
-  // Filtered lists
-  const filteredAreas = areas.filter((area) =>
-    area.toLowerCase().includes(areaSearch.toLowerCase())
-  );
-  const filteredCategories = categories.filter((cat) =>
-    cat.toLowerCase().includes(categorySearch.toLowerCase())
-  );
-
-  const fetchProductsData = async () => {
-    try {
-      const response = await api.get("/googlemap_data");
-      const products = response.data;
-
-      // Extract unique cities
-      const citys = products.map((product) => product.city);
-      const uniqueCities = [...new Set(citys)];
-      setAreas(uniqueCities);
-
-      // Extract unique categories
-      const categories = products.map((product) => product.category);
-      const uniqueCategories = [...new Set(categories)];
-      setCategories(uniqueCategories);
-
-    
-     
-    } catch (error) {
-      console.error("Error fetching products:", error);
+  // 2. DUMMY DATA (Jab tak backend se data nahi aata, testing ke liye)
+  const dummyData = [
+    {
+      global_business_id: "GB001",
+      business_id: "BZ101",
+      business_name: "Tech Solutions",
+      business_category: "IT",
+      city: "Bhopal",
+      ratings: "4.5",
+      primary_phone: "9876543210",
+      email: "info@tech.com",
+      website_url: "https://google.com"
     }
-  };
+  ];
 
-  return (<>
-    <Typography variant="h4" >
-      Listing Data Report
-    </Typography>
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
-      {/* Total Area Count */}
-      <Card className="shadow-md">
-        <CardBody>
-          <Typography variant="h5" color="blue-gray" className="mb-2">
-            Total Areas
-          </Typography>
-          {loading ? (
-            <Spinner className="h-6 w-6" />
-          ) : (
-            <Typography variant="h3" color="blue">
-              {areas.length}
-            </Typography>
-          )}
-        </CardBody>
-      </Card>
-
-      {/* Total Category Count */}
-      <Card className="shadow-md">
-        <CardBody>
-          <Typography variant="h5" color="blue-gray" className="mb-2">
-            Total Categories
-          </Typography>
-          {loading ? (
-            <Spinner className="h-6 w-6" />
-          ) : (
-            <Typography variant="h3" color="green">
-              {categories.length}
-            </Typography>
-          )}
-        </CardBody>
-      </Card>
-
-      {/* List of Areas with Search */}
-      <Card className="shadow-md lg:col-span-1">
-        <CardBody>
-          <Typography variant="h6" color="blue-gray" className="mb-4">
-            Areas
-          </Typography>
-
-          {/* Search Input */}
-          <div className="mb-4">
-            <Input
-              label="Search Areas"
-              icon={<MagnifyingGlassIcon className="h-5 w-5" />}
-              value={areaSearch}
-              onChange={(e) => setAreaSearch(e.target.value)}
-            />
-          </div>
-
-          {loading ? (
-            <Spinner className="h-6 w-6" />
-          ) : (
-            <List>
-              {filteredAreas.length > 0 ? (
-                filteredAreas.map((area, i) => (
-                  <ListItem key={i}>
-                    <ListItemPrefix>
-                      <MapPinIcon className="h-5 w-5 text-blue-500" />
-                    </ListItemPrefix>
-                    {area}
-                  </ListItem>
-                ))
-              ) : (
-                <Typography color="red" className="text-sm">
-                  No areas found
-                </Typography>
-              )}
-            </List>
-          )}
-        </CardBody>
-      </Card>
-
-      {/* List of Categories with Search */}
-      <Card className="shadow-md lg:col-span-1">
-        <CardBody>
-          <Typography variant="h6" color="blue-gray" className="mb-4">
-            Categories
-          </Typography>
-
-          {/* Search Input */}
-          <div className="mb-4">
-            <Input
-              label="Search Categories"
-              icon={<MagnifyingGlassIcon className="h-5 w-5" />}
-              value={categorySearch}
-              onChange={(e) => setCategorySearch(e.target.value)}
-            />
-          </div>
-
-          {loading ? (
-            <Spinner className="h-6 w-6" />
-          ) : (
-            <List>
-              {filteredCategories.length > 0 ? (
-                filteredCategories.map((cat, i) => (
-                  <ListItem key={i}>
-                    <ListItemPrefix>
-                      <FolderIcon className="h-5 w-5 text-green-500" />
-                    </ListItemPrefix>
-                    {cat}
-                  </ListItem>
-                ))
-              ) : (
-                <Typography color="red" className="text-sm">
-                  No categories found
-                </Typography>
-              )}
-            </List>
-          )}
-        </CardBody>
-      </Card>
+  return (
+    <div style={{ padding: '20px' }}>
+      <h2>Listing Data Report</h2>
+      {/* Table Call */}
+      <ReusableTable columns={columns} data={dummyData} />
     </div>
-  </>);
-}
+  );
+};
+
+export default ListingDataReport;

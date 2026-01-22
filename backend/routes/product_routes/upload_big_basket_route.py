@@ -11,7 +11,7 @@ def upload_big_basket_route():
     files = request.files.getlist("files")
     if not files:
         return jsonify({"error":"No files provided"}),400
-    UPLOAD_DIR = get_upload_base_dir()/"vivo"
+    UPLOAD_DIR = get_upload_base_dir()/"bigbasket"
     UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
     paths = []
     for f in files:

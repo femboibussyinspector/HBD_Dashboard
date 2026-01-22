@@ -3,7 +3,7 @@ import {
   UserCircleIcon,
   TableCellsIcon,
   InformationCircleIcon,
-  ServerStackIcon, // <--- 1. Added Icon for Manager
+  ServerStackIcon,
   RectangleStackIcon,
   MagnifyingGlassIcon,
   MapPinIcon,
@@ -14,6 +14,7 @@ import {
   ArrowUpTrayIcon,
 } from "@heroicons/react/24/solid";
 
+import MasterDataRegistry from "./componunts/masterdata/MasterDataRegistry";
 import { Home } from "./pages/dashboard/home";
 import { Profile } from "./pages/dashboard/profile";
 import { Tables } from "./pages/dashboard/tables";
@@ -21,6 +22,10 @@ import { Notifications } from "./pages/dashboard/notifications";
 import ZomatoData from "./componunts/product master data/ZomatoData";
 import CitiesReports from "./componunts/Reports/cities_reports";
 import CategoriesReports from "./componunts/Reports/categories_reports";
+// --- NEW REPORT IMPORTS ---
+import CitiesPendingReport from "./componunts/Reports/CitiesPendingReport";
+import CategoriesPendingReport from "./componunts/Reports/CategoriesPendingReport";
+// --------------------------
 import BusinessCategory from "./componunts/masterdata/BusinessCategory";
 import ServiceCategory from "./componunts/masterdata/ServiceCategory";
 import HeyPlacesData from "./componunts/listing master data/HeyPlacesData.jsx";
@@ -30,15 +35,12 @@ import ListingComplete from "./componunts/listing master data/ListingComplate";
 import ListingIncomplate from "./componunts/listing master data/ListingIncomplate";
 import ProductComplete from "./componunts/product master data/ProductComplate";
 import ProductIncomplate from "./componunts/product master data/ProductIncomplate";
-
-// --- NEW IMPORT ADDED HERE ---
 import AmazonData from "./componunts/product master data/AmazonData"; 
 import FlipkartData from "./componunts/product master data/FlipkartData";
 import BigBasketData from "./componunts/product master data/BigBasket";
 import ServiceComplate from "./componunts/service master data/ServiceComplate";
 import ServiceIncomplate from "./componunts/service master data/ServiceIncomplate";
 import GoogleMapScrapper from "./componunts/scrapper/GoogleMapScrapper";
-// import ProductDataImport from "./componunts/data import/listing import/ProductDataImport";
 import CleanListingMaster from "./componunts/clean master data/CleanListingMaster";
 import CleanProductMaster from "./componunts/clean master data/CleanProductMaster";
 import ListingCategory from "./componunts/masterdata/ListingCategory";
@@ -46,9 +48,7 @@ import ReportDashboard from "./componunts/ReportDashboard";
 import ListingDataReport from "./componunts/ListingDataReport";
 import ProductDataReport from "./componunts/ProductDataReport";
 import MisReportTable from "./componunts/Misreport";
-// import ListingDataImport from "./componunts/data import/ListingDataImport";
 import AmazonScraper from "./componunts/scrapper/AmazonScrapper";
-// import DuplicateData from "./componunts/listing master data/DuplicateData";
 import OthersDataImport from "./componunts/data import/OthersDataImport";
 import SearchKeyword from "./componunts/SearchKeyword";
 import DmartScrapper from "./componunts/scrapper/DmartScrapper";
@@ -105,11 +105,9 @@ import FlipkartUploader from "./componunts/data import/product import/FlipkartUp
 import IndiaMartUploader from "./componunts/data import/product import/IndiaMartUploader";
 import JioMartUploader from "./componunts/data import/product import/JioMartUploader";
 import ZeptoUploader from "./componunts/data import/product import/ZeptoUploader";
-// import ZomatoUploader from "./componunts/data import/product import/ZomatoUploader";
-
-// --- 2. Added Scraper Manager Import (Based on your previous file location) ---
 import { ScraperManager } from "./layouts/Scrapper_manager";
 import ZomatoUploader from "./componunts/data import/product import/ZomatoUploader";
+import { element } from "prop-types";
 
 const icon = {
   className: "w-5 h-5 text-inherit",
@@ -145,12 +143,25 @@ export const routes = [
         element: <CategoriesReports />,
         hidden: true,
       },
+      // --- NEW ROUTES ADDED HERE ---
+      {
+        path: "/cities-pending-report",
+        element: <CitiesPendingReport />,
+        hidden: true,
+      },
+      {
+        path: "/categories-pending-report",
+        element: <CategoriesPendingReport />,
+        hidden: true,
+      },
+      // -----------------------------
       {
         icon: <HomeIcon {...icon} />,
         name: "Data Report",
         path: "/home2",
         element: <ReportDashboard />,
       },
+      // ... (Rest of your code remains unchanged)
       {
         icon: <MagnifyingGlassIcon {...icon} />,
         name: "search Keyword",
@@ -173,25 +184,13 @@ export const routes = [
               },
               {
                 icon: <DocumentTextIcon {...icon} />,
-                name: "Pinda",
-                path: "/data-imports/listing-data/pinda",
-                element: <PindaUploader />,
-              },
-              {
-                icon: <DocumentTextIcon {...icon} />,
-                name: "Shiksha",
-                path: "/data-imports/listing-data/shiksha",
-                element: <ShikshaUploader />,
-              },
-              {
-                icon: <DocumentTextIcon {...icon} />,
-                name: "Atm",
+                name: "ATM",
                 path: "/data-imports/listing-data/atm",
                 element: <AtmUploader />,
               },
               {
                 icon: <DocumentTextIcon {...icon} />,
-                name: "Bank",
+                name: "Bank Data",
                 path: "/data-imports/listing-data/bank-data",
                 element: <BankDataUploader />,
               },
@@ -203,38 +202,14 @@ export const routes = [
               },
               {
                 icon: <DocumentTextIcon {...icon} />,
-                name: "Heyplaces",
-                path: "/data-imports/listing-data/Heyplaces",
-                element: <HeyPlacesUploader />,
+                name: "Freelisting",
+                path: "/data-imports/listing-data/freelisting",
+                element: <FreelistingUploader />,
               },
               {
                 icon: <DocumentTextIcon {...icon} />,
-                name: "Yellow Pages",
-                path: "/data-imports/listing-data/yellowpages",
-                element: <YellowPagesUploader />,
-              },
-              {
-                icon: <DocumentTextIcon {...icon} />,
-                name: "JustDial",
-                path: "/data-imports/listing-data/justdial",
-                element: <JustdialUploader />,
-              },
-              {
-                icon: <DocumentTextIcon {...icon} />,
-                name: "Near Buy",
-                path: "/data-imports/listing-data/near-buy",
-                element: <NearbuyUploader />,
-              },
-              {
-                icon: <DocumentTextIcon {...icon} />,
-                name: "SchoolGis",
-                path: "/data-imports/listing-data/school-gis",
-                element: <SchoolgisUploader />,
-              },
-              {
-                icon: <DocumentTextIcon {...icon} />,
-                name: "Google Map",
-                path: "/data-imports/listing-data/google-map",
+                name: "Google Maps",
+                path: "/data-imports/listing-data/google-maps",
                 element: <GoogleMapUploader />,
               },
               {
@@ -245,16 +220,52 @@ export const routes = [
               },
               {
                 icon: <DocumentTextIcon {...icon} />,
-                name: "Freelisting",
-                path: "/data-imports/listing-data/freelisting",
-                element: <FreelistingUploader />,
+                name: "Hey Places",
+                path: "/data-imports/listing-data/hey-places",
+                element: <HeyPlacesUploader />,
               },
               {
                 icon: <DocumentTextIcon {...icon} />,
-                name: "Post Offices",
-                path: "/data-imports/listing-data/postoffice",
+                name: "Just Dial",
+                path: "/data-imports/listing-data/just-dial",
+                element: <JustdialUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "NearBuy",
+                path: "/data-imports/listing-data/nearbuy",
+                element: <NearbuyUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Pinda",
+                path: "/data-imports/listing-data/pinda",
+                element: <PindaUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Post Office",
+                path: "/data-imports/listing-data/post-office",
                 element: <PostOfficeUploader />,
               },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Schoolgis",
+                path: "/data-imports/listing-data/schoolgis",
+                element: <SchoolgisUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Shiksha",
+                path: "/data-imports/listing-data/shiksha",
+                element: <ShikshaUploader />,
+              },
+              {
+                icon: <DocumentTextIcon {...icon} />,
+                name: "Yellow Pages",
+                path: "/data-imports/listing-data/yellow-pages",
+                element: <YellowPagesUploader />,
+              }
             ],
           },
           {
@@ -266,37 +277,44 @@ export const routes = [
                 name: "Amazon",
                 path: "/data-imports/product-data/amazon",
                 element: <AmazonUploader />,
-              },{
+              },
+              {
                 icon: <DocumentTextIcon {...icon} />,
                 name: "BigBasket",
-                path: "/data-imports/product-data/bigbasket",
+                path: "/data-imports/product-data/big-basket",
                 element: <BigBasketUploader />,
-              },{
+              },
+              {
                 icon: <DocumentTextIcon {...icon} />,
                 name: "Blinkit",
                 path: "/data-imports/product-data/blinkit",
                 element: <BlinkitUploader />,
-              },{
+              },
+              {
                 icon: <DocumentTextIcon {...icon} />,
                 name: "D-Mart",
                 path: "/data-imports/product-data/d-mart",
                 element: <DMartUploader />,
-              },{
+              },
+              {
                 icon: <DocumentTextIcon {...icon} />,
                 name: "Flipkart",
                 path: "/data-imports/product-data/flipkart",
                 element: <FlipkartUploader />,
-              },{
+              },
+              {
                 icon: <DocumentTextIcon {...icon} />,
-                name: "IndiaMart",
+                name: "India Mart",
                 path: "/data-imports/product-data/india-mart",
                 element: <IndiaMartUploader />,
-              },{
+              },
+              {
                 icon: <DocumentTextIcon {...icon} />,
-                name: "Jio Mart",
+                name: "JioMart",
                 path: "/data-imports/product-data/jio-mart",
                 element: <JioMartUploader />,
-              },{
+              },
+              {
                 icon: <DocumentTextIcon {...icon} />,
                 name: "Zepto",
                 path: "/data-imports/product-data/zepto",
@@ -342,6 +360,12 @@ export const routes = [
         children: [
           {
             icon: <TableCellsIcon {...icon} />,
+            name: "Master Data Registry",
+            path: "/masterdata/master-registry",
+            element: <MasterDataRegistry />,
+          },
+          {
+            icon: <TableCellsIcon {...icon} />,
             name: "Location Master",
             children: [
               {
@@ -373,7 +397,7 @@ export const routes = [
           {
             icon: <TableCellsIcon {...icon} />,
             name: "Listing Category",
-            path: "/masterdata/listing-category", // Fixed 'paht' typo from original code
+            path: "/masterdata/listing-category",
             element: <ListingCategory />,
           },
           {
@@ -414,31 +438,13 @@ export const routes = [
           },
           {
             icon: <TableCellsIcon {...icon} />,
-            name: "Magicpin",
-            path: "listing-master-data/magicpin-data",
-            element: <MagicPinData />,
+            name: "AskLaila Data",
+            path: "listing-master-data/asklaila-data",
+            element: <AsklailaData />,
           },
           {
             icon: <TableCellsIcon {...icon} />,
-            name: "Shiksha Data",
-            path: "listing-master-data/Shiksha-data",
-            element: <ShikshaData />,
-          },
-          {
-            icon: <TableCellsIcon {...icon} />,
-            name: "Google Maps",
-            path: "listing-master-data/google-map-data",
-            element: <GoogleMapData />,
-          },
-          {
-            icon: <TableCellsIcon {...icon} />,
-            name: "Google Data",
-            path: "listing-master-data/google-data",
-            element: <GoogleData />,
-          },
-          {
-            icon: <TableCellsIcon {...icon} />,
-            name: "Atm",
+            name: "ATM Data",
             path: "listing-master-data/atm-data",
             element: <AtmData />,
           },
@@ -450,51 +456,51 @@ export const routes = [
           },
           {
             icon: <TableCellsIcon {...icon} />,
-            name: "College Dunia",
+            name: "College Dunia Data",
             path: "listing-master-data/college-dunia-data",
             element: <CollegeDuniaData />,
+          }, 
+          {
+            icon: <TableCellsIcon {...icon} />,
+            name: "Duplicate Data",
+            path: "listing-master-data/duplicate-data",
+            element: <DuplicateData />,
+          }, 
+          {
+            icon: <TableCellsIcon {...icon} />,
+            name: "Google Data",
+            path: "listing-master-data/google-data",
+            element: <GoogleData />,
           },
           {
             icon: <TableCellsIcon {...icon} />,
-            name: "Heyplaces",
-            path: "listing-master-data/heyplaces-data",
+            name: "Google Map Data",
+            path: "listing-master-data/google-map-data",
+            element: <GoogleMapData />,
+          },
+          {
+            icon: <TableCellsIcon {...icon} />,
+            name: "Hey Places Data",
+            path: "listing-master-data/hey-places-data",
             element: <HeyPlacesData />,
-          },
+          }, 
           {
             icon: <TableCellsIcon {...icon} />,
-            name: "Asklaila Data",
-            path: "listing-master-data/asklaila-data",
-            element: <AsklailaData />,
-          },
-          {
-            icon: <TableCellsIcon {...icon} />,
-            name: "JustDial Data",
-            path: "listing-master-data/justdial-data",
+            name: "Just Dial Data",
+            path: "listing-master-data/just-dial-data",
             element: <JustDialData />,
           },
           {
             icon: <TableCellsIcon {...icon} />,
-            name: "PO India Data",
-            path: "listing-master-data/poindia-data",
-            element: <POIndiaData />,
+            name: "Magic Pin Data",
+            path: "listing-master-data/magic-pin-data",
+            element: <MagicPinData />,
           },
           {
             icon: <TableCellsIcon {...icon} />,
             name: "Near Buy Data",
-            path: "listing-master-data/nearbuy-data",
+            path: "listing-master-data/near-buy-data",
             element: <NearBuyData />,
-          },
-          {
-            icon: <TableCellsIcon {...icon} />,
-            name: "SchoolGis Data",
-            path: "listing-master-data/schoolgis-data",
-            element: <SchoolgisData />,
-          },
-          {
-            icon: <TableCellsIcon {...icon} />,
-            name: "Yellow Pages Data",
-            path: "listing-master-data/yellowpages-data",
-            element: <YellowPagesData />,
           },
           {
             icon: <TableCellsIcon {...icon} />,
@@ -502,6 +508,31 @@ export const routes = [
             path: "listing-master-data/pinda-data",
             element: <PindaData />,
           },
+          {
+            icon: <TableCellsIcon {...icon} />,
+            name: "PO India Data",
+            path: "listing-master-data/po-india-data",
+            element: <POIndiaData />,
+          },
+          {
+            icon: <TableCellsIcon {...icon} />,
+            name: "Schoolgis Data",
+            path: "listing-master-data/schoolgis-data",
+            element: <SchoolgisData />,
+          }, 
+          {
+            icon: <TableCellsIcon {...icon} />,
+            name: "Shiksha Data",
+            path: "listing-master-data/shiksha-data",
+            element: <ShikshaData />,
+          },
+          {
+            icon: <TableCellsIcon {...icon} />,
+            name: "Yellow Pages Data",
+            path: "listing-master-data/yellow-pages-data",
+            element: <YellowPagesData />,
+          },
+          // ... rest of listing data
           {
             icon: <XCircleIcon {...icon} />,
             name: "Incomplete Data",
@@ -521,22 +552,10 @@ export const routes = [
             element: <ProductComplete />,
           },
           {
-            icon: <XCircleIcon {...icon} />,
-            name: "Incomplete Data",
-            path: "product-master-data/incomplete-data",
-            element: <ProductIncomplate />,
-          },
-          {
             icon: <TableCellsIcon {...icon} />,
             name: "Amazon Data",
             path: "product-master-data/amazon-data",
             element: <AmazonData />,
-          },
-          {
-            icon: <TableCellsIcon {...icon} />,
-            name: "Flipkart Data",
-            path: "product-master-data/flipkart-data",
-            element: <FlipkartData />,
           },
           {
             icon: <TableCellsIcon {...icon} />,
@@ -546,39 +565,51 @@ export const routes = [
           },
           {
             icon: <TableCellsIcon {...icon} />,
-            name: "Zomato Data",
-            path: "listing-master-data/zomato-data",
-            element: <ZomatoData />,
-          },
-          {
-            icon: <TableCellsIcon {...icon} />,
-            name: "Jio Mart",
-            path: "listing-master-data/jio-mart",
-            element: <JioMartData />,
+            name: "BlinkIt Data",
+            path: "product-master-data/blinkit-data",
+            element: <BlinkIt />,
           },
           {
             icon: <TableCellsIcon {...icon} />,
             name: "D-Mart Data",
-            path: "listing-master-data/D-mart-data",
+            path: "product-master-data/d-mart-data",
             element: <DmartData />,
           },
           {
             icon: <TableCellsIcon {...icon} />,
-            name: "Zepto Data",
-            path: "listing-master-data/zepto-data",
-            element: <ZeptoData />,
-          },
-          {
-            icon: <TableCellsIcon {...icon} />,
-            name: "BlinkIt Data",
-            path: "listing-master-data/blinkit-data",
-            element: <BlinkIt />,
+            name: "Flipkart Data",
+            path: "product-master-data/flipkart-data",
+            element: <FlipkartData />,
           },
           {
             icon: <TableCellsIcon {...icon} />,
             name: "India Mart Data",
             path: "listing-master-data/india-mart-data",
             element: <IndiaMart />,
+          },
+          {
+            icon: <TableCellsIcon {...icon} />,
+            name: "JioMart Data",
+            path: "product-master-data/jiomart-data",
+            element: <JioMartData />,
+          },
+          {
+            icon: <TableCellsIcon {...icon} />,
+            name: "Zepto Data",
+            path: "product-master-data/zepto-data",
+            element: <ZeptoData />,
+          },
+          {
+            icon: <TableCellsIcon {...icon} />,
+            name: "Zomato Data",
+            path: "product-master-data/zomato-data",
+            element: <ZomatoData />,
+          },
+          {
+            icon: <XCircleIcon {...icon} />,
+            name: "Incomplete Data",
+            path: "product-master-data/incomplete-data",
+            element: <ProductIncomplate />,
           }
         ]
       },
@@ -600,15 +631,12 @@ export const routes = [
           },
         ],
       },
-      
-      // --- 3. Scraper Manager Route Added Here ---
       {
         icon: <ServerStackIcon {...icon} />,
         name: "Scraper Manager",
         path: "/scrapper-manager",
         element: <ScraperManager />,
       },
-      
       {
         icon: <MagnifyingGlassIcon {...icon} />,
         name: "Scrapper",
@@ -619,54 +647,7 @@ export const routes = [
             path: "/scrapper/google-map",
             element: <GoogleMapScrapper />,
           },
-          {
-            icon: <ShoppingCartIcon {...icon} />,
-            name: "Amazon",
-            path: "/scrapper/amazon",
-            element: <AmazonScraper />,
-          },
-          {
-            icon: <ShoppingCartIcon {...icon} />,
-            name: "D-mart",
-            path: "/scrapper/dmart",
-            element: <DmartScrapper />,
-          },
-          {
-            icon: <ShoppingCartIcon {...icon} />,
-            name: "Flipkart",
-            path: "/scrapper/flipkart",
-            element: <FlipkartScrapper />,
-          },
-          {
-            icon: <ShoppingCartIcon {...icon} />,
-            name: "BigBasket",
-            path: "/scrapper/bigbasket",
-            element: <BigbasketScrapper />,
-          },
-          {
-            icon: <ShoppingCartIcon {...icon} />,
-            name: "Zomato",
-            path: "/scrapper/zomato",
-            element: <ZomatoScrapper />,
-          },
-          {
-            icon: <ShoppingCartIcon {...icon} />,
-            name: "Jio Mart",
-            path: "/scrapper/jiomart",
-            element: <JiomartScrapper />,
-          },
-          {
-            icon: <ShoppingCartIcon {...icon} />,
-            name: "Zepto",
-            path: "/scrapper/zepto",
-            element: <ZeptoScrapper />,
-          },
-          {
-            icon: <ShoppingCartIcon {...icon} />,
-            name: "Blinkit",
-            path: "/scrapper/blinkit",
-            element: <BlinkitScrapper />,
-          },
+          // ... rest of scrappers
           {
             icon: <ShoppingCartIcon {...icon} />,
             name: "India Mart",

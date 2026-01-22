@@ -69,6 +69,7 @@ const DmartScraper = () => {
           <Input
             label="Product Name"
             placeholder="e.g. Milk, Rice, Oil"
+            shrink={true}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
