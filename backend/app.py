@@ -15,7 +15,7 @@ import requests
 from urllib.parse import urljoin
 from fake_useragent import UserAgent    
 from config import Config
-from extensions import db, jwt, cors
+from extensions import db, jwt, cors, mail
 import pandas as pd
 import ast
 
@@ -29,6 +29,7 @@ app.config.from_object(Config)
 db.init_app(app)
 jwt.init_app(app)
 cors(app)
+mail.init_app(app)
 
 # Import all SQLAlchemy models so that db.create_all() works
 from model.user import User
@@ -40,6 +41,39 @@ from model.upload_master_reports_model import UploadReport
 
 with app.app_context():
     db.create_all()
+
+
+# ========== GLOBAL JWT PROTECTION ==========
+# All routes require authentication except these public routes
+PUBLIC_ROUTES = [
+    "/",                    # Home page
+    "/auth/signup",     # Signup
+    "/auth/login",      # Login
+    "/auth/logout",     # Logout
+    "/auth/forgot-password", # Forgot Password
+    "/auth/verify-otp",      # Verify OTP
+    "/auth/reset-password",  # Reset Password
+    "/health",              # Health check
+]
+
+from flask_jwt_extended import verify_jwt_in_request
+
+@app.before_request
+def protect_all_routes():
+    """Require JWT token for all routes except public ones."""
+    # Skip protection for public routes
+    if request.path in PUBLIC_ROUTES:
+        return None
+    
+    # Skip OPTIONS requests (for CORS preflight)
+    if request.method == "OPTIONS":
+        return None
+    
+    # Verify JWT for all other routes
+    try:
+        verify_jwt_in_request()
+    except Exception as e:
+        return jsonify({"message": "Missing or invalid token", "error": str(e)}), 401
 
 
 # Load environment variables
@@ -94,7 +128,6 @@ class BusinessList:
         """Save data to MySQL database using credentials from .env"""
         connection = None
         try:
-            print("Saving to DB:", os.getenv('DB_HOST'), os.getenv('DB_USER'), os.getenv('DB_NAME'))
             connection = mysql.connector.connect(
                 host=os.getenv('DB_HOST'),
                 user=os.getenv('DB_USER'),
@@ -392,7 +425,6 @@ def api_scrape():
 def api_results():
     connection = None
     try:
-        print("Connecting with:", os.getenv('DB_HOST'), os.getenv('DB_USER'), os.getenv('DB_NAME'))
         connection = mysql.connector.connect(
            host=os.getenv('DB_HOST'),
            user=os.getenv('DB_USER'),
@@ -802,7 +834,7 @@ def index():
 
 # Register blueprints
 from routes.auth_route import auth_bp
-app.register_blueprint(auth_bp)
+app.register_blueprint(auth_bp, url_prefix="/auth")
 
 # googlemapdata endpoint
 from routes.googlemap import googlemap_bp
@@ -931,6 +963,3 @@ if __name__ == '__main__':
                     connection.close()
     else:
         parser.print_help()
-print("Loaded DB:", os.getenv("DB_USER"), os.getenv("DB_NAME"))
-
-
