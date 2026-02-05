@@ -25,6 +25,8 @@ from routes.master_table import master_table_bp
 from routes.upload_product_csv import product_csv_bp
 from routes.upload_item_csv import item_csv_bp
 from routes.amazon_product import amazon_products_bp
+
+# items data complate/incomplate
 from routes.items_data import item_bp
 from routes.item_csv_download import item_csv_bp as item_csv_download_bp
 from routes.item_duplicate import item_duplicate_bp
@@ -60,6 +62,17 @@ from routes.product_routes.upload_jio_mart_route import jiomart_bp
 load_dotenv()
 app = Flask(__name__)
 app.config.from_object(Config)
+blueprints_listing = [
+    (asklaila_bp, "/asklaila"), (atm_bp, "/atm"), (bank_bp, "/bank"),
+    (college_dunia_bp, "/college-dunia"), (freelisting_bp, "/freelisting"),
+    (gmap_upload_bp, "/google-map"), (google_map_scrape_bp, "/google-map-scrape"),
+    (heyplaces_bp, "/heyplaces"), (justdial_bp, "/justdial"), (magicpin_bp, "/magicpin"),
+    (nearbuy_bp, "/nearbuy"), (pinda_bp, "/pinda"), (post_office_bp, "/post-office"),
+    (schoolgis_bp, "/schoolgis"), (shiksha_bp, "/shiksha"), (yellow_pages_bp, "/yellow-pages"),
+    (amazon_upload_bp, "/amazon"), (vivo_bp, "/vivo"), (blinkit_bp, "/blinkit"),
+    (dmart_bp, "/dmart"), (flipkart_bp, "/flipkart"), (indiamart_bp, "/india-mart"),
+    (jiomart_bp, "/jio-mart"), (bigbasket_bp, "/big-basket")
+]
 
 # Init extensions
 db.init_app(app)
@@ -117,17 +130,7 @@ app.register_blueprint(item_csv_download_bp)
 app.register_blueprint(item_duplicate_bp)
 app.register_blueprint(upload_others_csv_bp)
 
-blueprints_listing = [
-    (asklaila_bp, "/asklaila"), (atm_bp, "/atm"), (bank_bp, "/bank"),
-    (college_dunia_bp, "/college-dunia"), (freelisting_bp, "/freelisting"),
-    (gmap_upload_bp, "/google-map"), (google_map_scrape_bp, "/google-map-scrape"),
-    (heyplaces_bp, "/heyplaces"), (justdial_bp, "/justdial"), (magicpin_bp, "/magicpin"),
-    (nearbuy_bp, "/nearbuy"), (pinda_bp, "/pinda"), (post_office_bp, "/post-office"),
-    (schoolgis_bp, "/schoolgis"), (shiksha_bp, "/shiksha"), (yellow_pages_bp, "/yellow-pages"),
-    (amazon_upload_bp, "/amazon"), (vivo_bp, "/vivo"), (blinkit_bp, "/blinkit"),
-    (dmart_bp, "/dmart"), (flipkart_bp, "/flipkart"), (indiamart_bp, "/india-mart"),
-    (jiomart_bp, "/jio-mart"), (bigbasket_bp, "/big-basket")
-]
+# Already defined above
 
 for bp, prefix in blueprints_listing:
     app.register_blueprint(bp, url_prefix=prefix)

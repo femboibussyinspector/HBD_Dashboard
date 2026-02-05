@@ -38,3 +38,9 @@ import tasks.listings_task.upload_shiksha_task
 import tasks.products_task.upload_amazon_products_task
 import tasks.products_task.upload_big_basket_task
 import tasks.upload_master_task
+import tasks.products_task.upload_blinkit_task
+import tasks.products_task.upload_dmart_task
+import tasks.products_task.upload_flipkart_task
+import tasks.products_task.upload_india_mart_task
+import tasks.products_task.upload_jio_mart_task
+import tasks.products_task.upload_vivo_task
