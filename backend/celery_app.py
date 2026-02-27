@@ -118,6 +118,7 @@ import tasks.listings_task.upload_shiksha_task
 import tasks.products_task.upload_amazon_products_task
 import tasks.products_task.upload_big_basket_task
 import tasks.gdrive_task.etl_tasks
+import tasks.deep_scraper_task
 
 
 # SECTION 8: Prometheus Metrics Server (starts with worker)

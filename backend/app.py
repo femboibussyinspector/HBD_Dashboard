@@ -67,10 +67,6 @@ from routes.product_routes.upload_flipkart_products_route import flipkart_bp
 from routes.product_routes.upload_india_mart_route import indiamart_bp
 from routes.product_routes.upload_jio_mart_route import jiomart_bp
 from routes.gdrive_etl_routes.validation_dashboard import validation_dashboard_bp
-
-from model.robust_gdrive_etl_v2 import start_background_etl
-import sys
-import signal
 # --- Initialize App ---
 load_dotenv()
 app = Flask(__name__)
@@ -88,22 +84,26 @@ with app.app_context():
 
 # --- GLOBAL JWT PROTECTION ---
 PUBLIC_ROUTES = [
-    "/", 
-    "/auth/signup", 
-    "/auth/login", 
+    "/",
+    "/auth/signup",
+    "/auth/login",
     "/auth/logout",
-    "/auth/forgot-password", 
-    "/auth/verify-otp", 
-    "/auth/reset-password", 
+    "/auth/forgot-password",
+    "/auth/verify-otp",
+    "/auth/reset-password",
     "/health",
     "/api/master-dashboard-stats",
-    "/atm/fetch-data",
+    # Listing/master data public fetch routes (all with /api prefix)
+    "/api/atm/fetch-data",
     "/api/bank/fetch-data",
-    "/asklaila/fetch-data",
-    "/college-dunia/fetch-data",
-    "/google-listings",        
-    "/listing-master",         
+    "/api/asklaila/fetch-data",
+    "/api/college-dunia/fetch-data",
+    "/api/post-office/fetch-data",
+    # Legacy listing endpoints kept public for compatibility
+    "/google-listings",
+    "/listing-master",
     "/complete-data",
+    # Validation dashboard
     "/api/validation/dashboard",
 ]
 
@@ -163,41 +163,3 @@ for bp, prefix in blueprints_listing:
 def index():
     return jsonify({"message": "Flask API is running! Clean and Modular."})
 
-if __name__ == '__main__':
-    print("🔗 Starting Background Sync Thread...")
-    ingestor = start_background_etl()
-    
-    # Daemonize the ingestor thread if possible
-    try:
-        if hasattr(ingestor, 'daemon'):
-            ingestor.daemon = True
-    except Exception:
-        pass
-
-    import gevent
-    from gevent.pywsgi import WSGIServer
-
-    # Create the WSGI Server
-    http_server = WSGIServer(('0.0.0.0', 8001), app)
-
-    def shutdown():
-        print('\n🛑 shutdown signal received. Stopping background threads...')
-        if ingestor:
-            ingestor.shutdown()
-        http_server.stop()
-        print("✅ Shutdown complete.")
-        sys.exit(0)
-
-    # Optional handle for SIGINT if supported
-    import signal
-    try:
-        gevent.signal_handler(signal.SIGINT, shutdown)
-    except AttributeError:
-        # Windows doesn't support gevent.signal_handler, fallback
-        pass
-
-    try:
-        print("🚀 Starting Gevent WSGIServer on port 8001. Press CTRL+C to quit.")
-        http_server.serve_forever()
-    except KeyboardInterrupt:
-        shutdown()

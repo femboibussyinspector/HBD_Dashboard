@@ -359,29 +359,3 @@ class GDriveHighSpeedIngestor:
         self.save_change_token(self.page_token)
         logger.info(f"✨ Reactive Cycle dispatched in {time.time() - start_time:.2f}s")
 
-def get_engine():
-    return GDriveHighSpeedIngestor()
-
-def start_background_etl():
-    """Started by app.py to orchestrate the scanning."""
-    ingestor = get_engine()
-    def loop():
-        while not ingestor.shutdown_event.is_set():
-            try:
-                ingestor.run_pipeline()
-                logger.info("Sleeping for 60s...")
-                # Fix 7: Interruptible Sleep
-                if ingestor.shutdown_event.wait(timeout=60):
-                    logger.info("🛑 Background ETL Thread stopping...")
-                    break
-            except Exception as e:
-                logger.error(f"ETL Loop error: {e}")
-                time.sleep(10)
-    
-    t = threading.Thread(target=loop, daemon=True)
-    t.start()
-    return ingestor
-
-if __name__ == "__main__":
-    start_background_etl()
-    while True: time.sleep(1)

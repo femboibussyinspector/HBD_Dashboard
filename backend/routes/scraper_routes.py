@@ -1,10 +1,8 @@
 from flask import Blueprint, request, jsonify, current_app
 from extensions import db
 from model.scraper_task import ScraperTask
-import threading
 
-# Import the service function we created in Step 1
-from services.scrapers.google_maps_service import run_google_maps_scraper
+from tasks.deep_scraper_task import run_deep_scraper
 
 scraper_bp = Blueprint('scraper_bp', __name__)
 
@@ -62,10 +60,8 @@ def start_deep_scrape():
     db.session.add(new_task)
     db.session.commit()
 
-    # 2. Start Scraper in Thread
-    app = current_app._get_current_object()
-    thread = threading.Thread(target=run_google_maps_scraper, args=(new_task.id, app))
-    thread.start()
+    # 2. Dispatch scraper to Celery worker
+    run_deep_scraper.delay(new_task.id)
 
     return jsonify({"message": "Deep Scraper Started", "task_id": new_task.id}), 202
 
