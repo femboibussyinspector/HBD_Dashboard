@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
-import ReusableTable from "../Table/ReusableTable"; 
-<<<<<<< Updated upstream
+import ReusableTable from "../Table/ReusableTable";
 import api from "../../utils/Api";
-=======
 import {
   Card,
   CardHeader,
@@ -13,7 +11,6 @@ import {
   Spinner,
 } from "@material-tailwind/react";
 import { ArrowPathIcon } from "@heroicons/react/24/solid";
->>>>>>> Stashed changes
 
 const MasterData = () => {
   const [data, setData] = useState([]);
@@ -25,11 +22,7 @@ const MasterData = () => {
   const limit = 1000;
   const totalPages = Math.ceil(totalRecords / limit);
 
-<<<<<<< Updated upstream
-  // 1. DEFINE COLUMNS ONCE (Easy to reorder or hide)
-=======
-  // ALL 49 COLUMNS MAPPED FROM THE SCHEMA
->>>>>>> Stashed changes
+  // Define columns for master data table
   const columns = [
     { header: "ID", accessor: "id" },
     { header: "Global Business ID", accessor: "global_business_id" },
@@ -89,18 +82,6 @@ const MasterData = () => {
   const fetchData = async (page, searchTerm = "") => {
     setLoading(true);
     try {
-<<<<<<< Updated upstream
-      const response = await api.get(
-        `/read_master_input/?page=${page}&limit=${limit}&search=${searchTerm}`
-      );
-   
-      // If 'api.get' returns the JSON directly, remove the .json() line below.
-      const result = await response.json(); 
-      setData(result.data || []);
-      setTotalRecords(result.total_records || 0);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-=======
       const queryParams = new URLSearchParams({
         page: currentPage,
         limit: limit,
@@ -131,7 +112,6 @@ const MasterData = () => {
     } catch (err) {
       console.error("Fetch Error:", err);
       setError("Failed to fetch data from backend.");
->>>>>>> Stashed changes
     } finally {
       setLoading(false);
     }
@@ -154,15 +134,6 @@ const MasterData = () => {
         />
       </div>
 
-<<<<<<< Updated upstream
-      {/* TABLE AREA */}
-      <div className="bg-white shadow rounded-lg p-4">
-        {loading ? (
-          <p className="text-center text-blue-500 font-semibold">Loading data...</p>
-        ) : (
-          <>
-            {/* 2. USE THE COMPONENT (Replaces 50 lines of HTML) */}
-=======
       <Card className="border border-gray-200 rounded-xl shadow-sm bg-white overflow-hidden">
         <CardBody className="overflow-x-auto p-0">
           {loading ? (
@@ -173,34 +144,35 @@ const MasterData = () => {
               </Typography>
             </div>
           ) : (
->>>>>>> Stashed changes
-            <ReusableTable columns={columns} data={data} />
+            <>
+              <ReusableTable columns={columns} data={data} />
 
-            {/* PAGINATION CONTROLS */}
-            <div className="flex justify-center items-center mt-6 gap-2 flex-wrap">
-              <button
-                className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((p) => p - 1)}
-              >
-                Previous
-              </button>
-              
-              <span className="text-sm text-gray-600">
-                 Page {currentPage} of {totalPages}
-              </span>
+              {/* PAGINATION CONTROLS */}
+              <div className="flex justify-center items-center mt-6 gap-2 flex-wrap">
+                <button
+                  className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                >
+                  Previous
+                </button>
+                
+                <span className="text-sm text-gray-600">
+                   Page {currentPage} of {totalPages}
+                </span>
 
-              <button
-                className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((p) => p + 1)}
-              >
-                Next
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+                <button
+                  className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            </>
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 };

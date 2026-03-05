@@ -14,14 +14,8 @@ import {
   ArrowUpTrayIcon,
 } from "@heroicons/react/24/solid";
 
-<<<<<<< Updated upstream
 import MasterDataRegistry from "./componunts/masterdata/MasterDataRegistry";
-=======
-
-
-import MasterDataUploader from "./componunts/data import/MasterDataUploader";
 import MasterData from "./componunts/masterdata/Masterdata";
->>>>>>> Stashed changes
 import { Home } from "./pages/dashboard/home";
 import { Profile } from "./pages/dashboard/profile";
 import { Tables } from "./pages/dashboard/tables";
@@ -63,20 +57,6 @@ import State from "./componunts/masterdata/location msater/State";
 import Country from "./componunts/masterdata/location msater/Country";
 import Area from "./componunts/masterdata/location msater/Area";
 import City from "./componunts/masterdata/location msater/City";
-<<<<<<< Updated upstream
-import GoogleData from "./componunts/listing master data/ShikshaData";
-import GoogleMapData from "./componunts/listing master data/GoogleMapData";
-import CollegeDuniaData from "./componunts/listing master data/CollegeDuniaData";
-import MagicPinData from "./componunts/listing master data/MagicPinData";
-import AsklailaData from "./componunts/listing master data/AsklailaData";
-import AtmData from "./componunts/listing master data/AtmData";
-import JustDialData from "./componunts/listing master data/JustDialData";
-import POIndiaData from "./componunts/listing master data/POIndiaData";
-import NearBuyData from "./componunts/listing master data/NearBuyData";
-import SchoolgisData from "./componunts/listing master data/SchoolgisData";
-import YellowPagesData from "./componunts/listing master data/YellowPagesData";
-import PindaData from "./componunts/listing master data/PindaData";
-=======
 import GoogleData from "./componunts/Source Wise data/GoogleData";
 import GoogleMapData from "./componunts/Source Wise data/GoogleMapData";
 import CollegeDuniaData from "./componunts/Source Wise data/CollegeDuniaData";
@@ -89,7 +69,6 @@ import NearBuyData from "./componunts/Source Wise data/NearBuyData";
 import SchoolgisData from "./componunts/Source Wise data/SchoolgisData";
 import YellowPagesData from "./componunts/Source Wise data/YellowPagesData";
 import PindaData from "./componunts/Source Wise data/PindaData";
->>>>>>> Stashed changes
 import GoogleUploader from "./componunts/data import/listing import/GoogleUploader";
 import BankDataUploader from "./componunts/data import/listing import/BankDataUploader";
 import CollegeDuniaUploader from "./componunts/data import/listing import/CollegeDuniaUploader";
@@ -129,18 +108,14 @@ import JioMartUploader from "./componunts/data import/product import/JioMartUplo
 import ZeptoUploader from "./componunts/data import/product import/ZeptoUploader";
 import { ScraperManager } from "./layouts/Scrapper_manager";
 import ZomatoUploader from "./componunts/data import/product import/ZomatoUploader";
-<<<<<<< Updated upstream
 import RawCleanedData from "./componunts/masterdata/RawCleanedData";
 import ValidationDashboard from "./componunts/masterdata/ValidationDashboard";
 import ValidationReport from "./componunts/masterdata/ValidationReport";
-
-=======
 import { SignIn } from "./pages/auth/sign-in";
 import { SignUp } from "./pages/auth/sign-up";
 import MasterDataDashboard from "./componunts/MasterDataDashboard";
-import { element } from "prop-types";
 import LocationMasterData from "./componunts/masterdata/LocationMasterData";
->>>>>>> Stashed changes
+
 const icon = {
   className: "w-5 h-5 text-inherit",
 };

@@ -73,7 +73,6 @@ const MasterDataRegistry = () => {
     // eslint-disable-next-line
   }, []);
 
-<<<<<<< Updated upstream
   const fetchData = (cursor = null, direction = 'next') => {
     setLoading(true);
     const params = { limit: 10 };
@@ -98,30 +97,6 @@ const MasterDataRegistry = () => {
         console.error(err);
         setLoading(false);
       });
-  };
-=======
-  
->>>>>>> Stashed changes
-
-  const fetchData = async (page) => {
-    setLoading(true);
-    try {
-      // Axios automatically handles your base URL (dashboard.cityhangaround.com)
-      const res = await api.get("/master_table/list", {
-        params: { page: page, limit: 10 }
-      });
-      
-      // Axios puts the response JSON inside a .data object automatically
-      const result = res.data; 
-  
-      setAllData(result.data || []);
-      setTotalPages(result.total_pages || 1);
-      setTotalRecords(result.total_count || 0);
-    } catch (err) {
-      console.error("Fetch Error:", err);
-    } finally {
-      setLoading(false);
-    }
   };
   return (
     <div style={{ padding: '20px' }}>
