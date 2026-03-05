@@ -1,7 +1,23 @@
 from flask import Blueprint, jsonify, request
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, text
+from sqlalchemy.sql import text
+from pathlib import Path
+from werkzeug.utils import secure_filename
+import os
+
 from model.master_table_model import MasterTable
+from model.upload_master_reports_model import UploadReport
 from database.session import get_db_session
+
+# Define upload directory helper
+def get_upload_base_dir():
+    return Path(os.getenv("UPLOAD_DIR", "./uploads"))
+
+# Import Celery task
+try:
+    from tasks.upload_master_task import process_master_upload_task
+except ImportError:
+    process_master_upload_task = None
 
 master_table_bp = Blueprint("master_table", __name__)
 
@@ -152,7 +168,7 @@ def get_master_dashboard_stats():
         return jsonify({"status": "ERROR", "message": str(e)}), 500
     finally:
         session.close()
->>>>>>> Stashed changes
+
 @master_table_bp.route("/master_table/list", methods=["GET"])
 def get_master_table_list():
     session = get_db_session()
