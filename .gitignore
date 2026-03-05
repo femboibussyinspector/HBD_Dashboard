@@ -13,3 +13,23 @@ backend/.agent
 backend/.github/
 *.md
 *.pdf
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database backups
+*.sql
+*.sql.gz
+backup*.sql*
+
+# Package lock files (root level only, keep frontend/backend ones)
+/package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

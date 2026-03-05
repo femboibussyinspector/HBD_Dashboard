@@ -98,7 +98,6 @@ const MasterDataRegistry = () => {
         setLoading(false);
       });
   };
-
   return (
     <div style={{ padding: '20px' }}>
       <h2>Full Master Registry (All 36 Fields)</h2>

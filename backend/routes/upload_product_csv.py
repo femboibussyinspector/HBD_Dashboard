@@ -119,7 +119,7 @@ import chardet
 import json
 from sqlalchemy.exc import SQLAlchemyError
 from database.session import get_db_session
-from model.amazon_product_model import AmazonProduct
+from model.product_model.amazon_product import AmazonProduct
 import numpy as np
 import traceback
 

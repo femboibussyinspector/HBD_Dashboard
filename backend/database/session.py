@@ -17,7 +17,7 @@ DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_NAME = os.getenv('DB_NAME')
 DB_PORT = os.getenv('DB_PORT')
 
-print("DEBUG ENV -> HOST:", DB_HOST, "USER:", DB_USER, "PASS:", DB_PASSWORD, "DB:", DB_NAME)
+print(f"DEBUG ENV -> HOST: {DB_HOST} USER: {DB_USER} PASS: {'*' * len(DB_PASSWORD or '')} DB: {DB_NAME}")
 
 import urllib.parse
 # Construct database URL dynamically from environment variables

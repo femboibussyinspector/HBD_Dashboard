@@ -1,31 +1,42 @@
-from flask import Flask,request,jsonify,Blueprint
-from tasks.products_task.upload_big_basket_task import process_big_basket_task
-from werkzeug.utils import secure_filename
-import os 
-from utils.storage import get_upload_base_dir
+from flask import Blueprint, request, jsonify
+from extensions import db
+from model.product_model.bigbasket_product_model import BigBasket
 
-bigbasket_bp = Blueprint("bigbasket_bp",__name__)
-@bigbasket_bp.route("/upload/bigbasket-data",methods=["POST"])
+bigbasket_bp = Blueprint('bigbasket_bp', __name__)
 
-def upload_big_basket_route():
-    files = request.files.getlist("files")
-    if not files:
-        return jsonify({"error":"No files provided"}),400
-    UPLOAD_DIR = get_upload_base_dir()/"vivo"
-    UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
-    paths = []
-    for f in files:
-        filename = secure_filename(f.filename)
-        filepath = UPLOAD_DIR/filename
-        f.save(filepath)
-        paths.append(str(filepath))
+@bigbasket_bp.route('/fetch-data', methods=['GET'])
+def fetch_bigbasket_data():
     try:
-        task = process_big_basket_task.delay(paths)
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 10, type=int)
+        
+        # Capture all three search inputs
+        search = request.args.get('search', '')
+        category = request.args.get('category', '')
+        sub_category = request.args.get('subcategory', '')
+
+        query = BigBasket.query
+        
+        # Apply filters conditionally
+        if search:
+            query = query.filter(BigBasket.product.ilike(f"%{search}%"))
+        
+        if category:
+            query = query.filter(BigBasket.category.ilike(f"%{category}%"))
+            
+        if sub_category:
+            query = query.filter(BigBasket.sub_category.ilike(f"%{sub_category}%"))
+        
+        pagination = query.paginate(page=page, per_page=limit, error_out=False)
+        
         return jsonify({
-            "status":"files_accepted",
-            "task_id":task.id
-            }),202
+            "status": "success",
+            "data": [item.to_dict() for item in pagination.items],
+            "total_pages": pagination.pages,
+            "total_count": pagination.total,
+            "current_page": page
+        }), 200
+        
     except Exception as e:
-        return jsonify({
-            "error":str(e)
-        }),500
+        print(f"❌ BigBasket Route Error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500

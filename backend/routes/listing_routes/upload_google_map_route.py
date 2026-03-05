@@ -1,28 +1,40 @@
-from flask import Flask,request,jsonify,Blueprint
-from tasks.listings_task.upload_google_map_task import process_google_map_task
-from werkzeug.utils import secure_filename
-import os 
-from utils.storage import get_upload_base_dir
+from flask import Blueprint, request, jsonify
+from extensions import db
 
-google_map_bp = Blueprint("google_map_bp",__name__)
-@google_map_bp.route("/upload/google-map-data",methods=["POST"])
-def upload_google_map_route():
-    files = request.files.getlist("files")
-    if not files:
-        return jsonify({"error":"No files provided"}),400
-    UPLOAD_DIR = get_upload_base_dir()/"google_map"
-    UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
-    paths = []
-    for f in files:
-        filename = secure_filename(f.filename)
-        filepath = UPLOAD_DIR/filename
-        f.save(filepath)
-        paths.append(str(filepath))
+# Make sure this import matches your exact filename (you mentioned googlepay.py)
+# If your file is googlepay.py, change this to: from model.googlepay import GoogleMapData
+from model.googlemap_data import GoogleMapData 
+
+google_map_bp = Blueprint('google_map_bp', __name__)
+
+@google_map_bp.route('/fetch-data', methods=['GET'])
+def fetch_google_map_data():
     try:
-        task = process_google_map_task.delay(paths)
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 10, type=int)
+        search = request.args.get('search', '')
+        city = request.args.get('city', '')
+
+        query = GoogleMapData.query
+        
+        # 1. Searching by 'business_name' because that is the column in your model
+        if search:
+            query = query.filter(GoogleMapData.business_name.ilike(f"%{search}%"))
+        
+        # 2. Searching by 'address' because your model does not have a 'city' column
+        if city:
+            query = query.filter(GoogleMapData.address.ilike(f"%{city}%"))
+        
+        pagination = query.paginate(page=page, per_page=limit, error_out=False)
+        
         return jsonify({
-            "status":"files_accepted",
-            "task_id": task.id
-            }), 202
+            "status": "success",
+            "data": [item.to_dict() for item in pagination.items],
+            "total_pages": pagination.pages,
+            "total_count": pagination.total,
+            "current_page": page
+        }), 200
+        
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ Google Map Route Error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500

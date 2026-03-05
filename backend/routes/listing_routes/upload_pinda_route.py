@@ -1,25 +1,32 @@
-from flask import Flask,request,jsonify,Blueprint
-from tasks.listings_task.upload_pinda_task import process_pinda_task
-from werkzeug.utils import secure_filename
-import os 
-from utils.storage import get_upload_base_dir
+from flask import Blueprint, request, jsonify
+from extensions import db
+from model.pinda import Pinda
 
 pinda_bp = Blueprint('pinda_bp', __name__)
-@pinda_bp.route('/upload/pinda-data', methods=['POST'])
-def upload_pinda_route():
-    files = request.files.getlist('files')
-    if not files:
-        return jsonify({"error": "No files provided"}), 400
-    UPLOAD_DIR = get_upload_base_dir()/"pinda"
-    UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
-    paths = []
-    for f in files:
-        filename = secure_filename(f.filename)
-        filepath = UPLOAD_DIR/filename
-        f.save(filepath)
-        paths.append(str(filepath))
+
+@pinda_bp.route('/fetch-data', methods=['GET'])
+def fetch_pinda_data():
     try:
-        task = process_pinda_task.delay(paths)
-        return jsonify({"status":"files_accepted","task_id": task.id}), 202
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 10, type=int)
+        search = request.args.get('search', '')
+        city = request.args.get('city', '')
+
+        query = Pinda.query
+        if search:
+            query = query.filter(Pinda.name.ilike(f"%{search}%"))
+        if city:
+            query = query.filter(Pinda.city.ilike(f"%{city}%"))
+        
+        pagination = query.paginate(page=page, per_page=limit, error_out=False)
+        
+        return jsonify({
+            "status": "success",
+            "data": [item.to_dict() for item in pagination.items],
+            "total_pages": pagination.pages,
+            "total_count": pagination.total,
+            "current_page": page
+        }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ Pinda Route Error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500

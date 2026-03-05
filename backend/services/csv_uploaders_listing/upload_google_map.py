@@ -1,26 +1,33 @@
-import pandas as pd
+import csv
 from database.mysql_connection import get_mysql_connection
 from utils.safe_get import safe_get
-from utils.drop_non_essential_indexes import drop_non_essential_indexes
-from utils.create_non_essential_indexes import create_non_essential_indexes
 
 def upload_google_map_data(file_paths):
+    """
+    Memory-safe streaming uploader for Google Map CSV data.
+    Uses native csv module to avoid Pandas OOM risks for large files.
+    """
     if not file_paths:
         raise ValueError("No file paths provided for upload.")
+    
     connection = get_mysql_connection()
     cursor = connection.cursor()
     inserted = 0
-    batch_size = 10000
-    upload_success = False
+    batch_size = 2000 # Optimized batch size for stability
+    
     try:
-        for file in file_paths:
-            with open(file,newline='',encoding='utf-8') as f:  
-                currFile_chunks = pd.read_csv(file,chunksize = batch_size)
-                for chunk in currFile_chunks:
-                    chunk = chunk.rename(columns=lambda c: c.replace(" ", "_"))
-                    chunk_data = []
-                    for row in chunk.itertuples(index=False):
-                        row_tuple = (
+        for file_path in file_paths:
+            with open(file_path, newline='', encoding='utf-8') as f:
+                # Use csv.DictReader for field-name based access
+                reader = csv.DictReader(f)
+                
+                # Sanitize field names (handling spaces like the old Pandas renaming)
+                fieldnames = [fn.replace(" ", "_") for fn in reader.fieldnames]
+                reader.fieldnames = fieldnames
+                
+                chunk_data = []
+                for row in reader:
+                    row_tuple = (
                         safe_get(row, 'Business_Name'),
                         safe_get(row, 'Phone'),
                         safe_get(row, 'Email'),
@@ -82,149 +89,68 @@ def upload_google_map_data(file_paths):
                         safe_get(row, 'ShareLink'),
                         safe_get(row, 'ShareLinkOrganizationId'),
                         safe_get(row, 'EmbedMapCode'),
-                        )   
-                        chunk_data.append(row_tuple)
-
-                # storing the valus in the database
-                    upload_google_map_data_query = '''
-                        INSERT INTO google_map (
-                            business_name,
-                            number,  
-                            email ,
-                            website ,
-                            address , 
-                            latitude ,
-                            longitude ,
-                            rating ,
-                            review ,
-                            category,
-                            image1,
-                            image2,
-                            image3,
-                            image4,
-                            image5,
-                            image6 ,
-                            image7  ,
-                            image8  ,
-                            image9  ,
-                            image10  ,
-                            working_hour  ,
-                            facebook_profile  ,
-                            instagram_profile , 
-                            linkedin_profile  ,
-                            twitter_profile  ,
-                            source_name,
-                            g_id ,
-                            gmaps_link  ,
-                            organization_name ,
-                            organization_id ,
-                            rate_stars,
-                            reviews_total_count  ,
-                            price_policy  ,
-                            organization_category ,
-                            organization_address  ,
-                            organization_locatedin_information  ,
-                            organization_website  ,
-                            organization_phone_number ,
-                            organization_pluscode ,
-                            organization_work_time  ,
-                            organization_popular_load_times  ,
-                            organiztion_latitude ,
-                            organization_longitude ,
-                            organization_short_description  ,
-                            organization_head_photo_file  ,
-                            organization_head_photo_url  ,
-                            organization_photos_files  ,
-                            organizatiion_photos_urls  ,
-                            organization_email ,
-                            organization_facebook  ,
-                            organization_instagram  ,
-                            organization_twitter  ,
-                            organization_linkedin  ,
-                            organization_youtube  ,
-                            organization_contacts_url  ,
-                            organization_yelp  ,
-                            organization_trip_advisor  ,
-                            search_request  ,
-                            share_link  ,
-                            share_link_organization_id  ,
-                            embed_map_code ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
-                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
-                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
-                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
-                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
-                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s )
-                            ON DUPLICATE KEY UPDATE 
-                            number = VALUES(number),
-                            email = VALUES(email),
-                            website = VALUES(website),
-                            latitude = VALUES(latitude),
-                            longitude = VALUES(longitude) ,
-                            rating = VALUES(rating),
-                            review = VALUES(review),
-                            category= VALUES(category),
-                            image1= VALUES(image1),
-                            image2= VALUES(image2),
-                            image3= VALUES(image3),
-                            image4= VALUES(image4),
-                            image5= VALUES(image5),
-                            image6 = VALUES(image6),
-                            image7  = VALUES(image7),
-                            image8 = VALUES(image8) ,
-                            image9  = VALUES(image9),
-                            image10 = VALUES(image10) ,
-                            working_hour = VALUES(working_hour) ,
-                            facebook_profile = VALUES(facebook_profile) ,
-                            instagram_profile= VALUES(instagram_profile) , 
-                            linkedin_profile = VALUES(linkedin_profile) ,
-                            twitter_profile = VALUES(twitter_profile) ,
-                            source_name= VALUES(source_name),
-                            g_id = VALUES(g_id),
-                            gmaps_link  = VALUES(gmaps_link),
-                            organization_name= VALUES(organization_name) ,
-                            organization_id = VALUES(organization_id),
-                            rate_stars= VALUES(rate_stars),
-                            reviews_total_count = VALUES(reviews_total_count) ,
-                            price_policy = VALUES(price_policy) ,
-                            organization_category = VALUES(organization_category),
-                            organization_address = VALUES(organization_address) ,
-                            organization_locatedin_information = VALUES(organization_locatedin_information) ,
-                            organization_website = VALUES(organization_website) ,
-                            organization_phone_number= VALUES(organization_phone_number) ,
-                            organization_pluscode = VALUES(organization_pluscode),
-                            organization_work_time = VALUES(organization_work_time) ,
-                            organization_popular_load_times = VALUES(organization_popular_load_times) ,
-                            organiztion_latitude = VALUES(organiztion_latitude),
-                            organization_longitude = VALUES(organization_longitude),
-                            organization_short_description = VALUES(organization_short_description) ,
-                            organization_head_photo_file = VALUES(organization_head_photo_file) ,
-                            organization_head_photo_url = VALUES(organization_head_photo_url) ,
-                            organization_photos_files = VALUES(organization_photos_files) ,
-                            organizatiion_photos_urls = VALUES(organizatiion_photos_urls) ,
-                            organization_email = VALUES(organization_email),
-                            organization_facebook = VALUES(organization_facebook) ,
-                            organization_instagram = VALUES(organization_instagram) ,
-                            organization_twitter = VALUES(organization_twitter) ,
-                            organization_linkedin = VALUES(organization_linkedin) ,
-                            organization_youtube = VALUES(organization_youtube) ,
-                            organization_contacts_url = VALUES(organization_contacts_url) ,
-                            organization_yelp = VALUES(organization_yelp) ,
-                            organization_trip_advisor = VALUES(organization_trip_advisor) ,
-                            search_request = VALUES(search_request) ,
-                            share_link = VALUES(share_link) ,
-                            share_link_organization_id = VALUES(share_link_organization_id) ,
-                            embed_map_code = VALUES(embed_map_code)
-                    '''
-                    try:
-                        cursor.executemany(upload_google_map_data_query,chunk_data)
-                        connection.commit()
-                        inserted+=len(chunk_data)
-                    except Exception:
-                        print("roll error")
-                        connection.rollback()
-                        raise 
-        # upload_success = True
+                    )
+                    chunk_data.append(row_tuple)
+                    
+                    if len(chunk_data) >= batch_size:
+                        _execute_batch(cursor, connection, chunk_data)
+                        inserted += len(chunk_data)
+                        chunk_data = []
+                
+                # Final chunk
+                if chunk_data:
+                    _execute_batch(cursor, connection, chunk_data)
+                    inserted += len(chunk_data)
+        
         return inserted
     finally:
         cursor.close()
         connection.close()
+
+def _execute_batch(cursor, connection, chunk_data):
+    """Internal helper for batch execution."""
+    query = '''
+        INSERT INTO google_map (
+            business_name, number, email, website, address, 
+            latitude, longitude, rating, review, category,
+            image1, image2, image3, image4, image5, image6, image7, image8, image9, image10,
+            working_hour, facebook_profile, instagram_profile, linkedin_profile, twitter_profile,
+            source_name, g_id, gmaps_link, organization_name, organization_id,
+            rate_stars, reviews_total_count, price_policy, organization_category, organization_address,
+            organization_locatedin_information, organization_website, organization_phone_number,
+            organization_pluscode, organization_work_time, organization_popular_load_times,
+            organiztion_latitude, organization_longitude, organization_short_description,
+            organization_head_photo_file, organization_head_photo_url, organization_photos_files,
+            organizatiion_photos_urls, organization_email, organization_facebook,
+            organization_instagram, organization_twitter, organization_linkedin,
+            organization_youtube, organization_contacts_url, organization_yelp,
+            organization_trip_advisor, search_request, share_link,
+            share_link_organization_id, embed_map_code
+        ) VALUES (
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+        )
+        ON DUPLICATE KEY UPDATE 
+            number = VALUES(number),
+            email = VALUES(email),
+            website = VALUES(website),
+            latitude = VALUES(latitude),
+            longitude = VALUES(longitude),
+            rating = VALUES(rating),
+            review = VALUES(review),
+            category = VALUES(category),
+            working_hour = VALUES(working_hour),
+            organization_phone_number = VALUES(organization_phone_number),
+            organization_website = VALUES(organization_website)
+    '''
+    try:
+        cursor.executemany(query, chunk_data)
+        connection.commit()
+    except Exception as e:
+        connection.rollback()
+        print(f"Batch Insert Failed: {e}")
+        raise

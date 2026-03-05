@@ -1,28 +1,36 @@
-from flask import Flask,request,jsonify,Blueprint
-from tasks.listings_task.upload_schoolgis_task import process_schoolgis_task
-from werkzeug.utils import secure_filename  
-import os 
-from utils.storage import get_upload_base_dir
+from flask import Blueprint, request, jsonify
+from extensions import db
+from model.schoolgis import SchoolGIS
 
-schoolgis_bp = Blueprint("schoolgis_bp",__name__)
-@schoolgis_bp.route("/upload/schoolgis-data",methods=["POST"])
-def upload_schoolgis_route():
-    files = request.files.getlist("files")
-    if not files:
-        return jsonify({"error":"No files provided"}),400
-    UPLOAD_DIR = get_upload_base_dir()/"schoolgis"
-    UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
-    paths = []
-    for f in files:
-        filename = secure_filename(f.filename)
-        filepath = UPLOAD_DIR/filename
-        f.save(filepath)
-        paths.append(str(filepath))
+schoolgis_bp = Blueprint('schoolgis_bp', __name__)
+
+@schoolgis_bp.route('/fetch-data', methods=['GET'])
+def fetch_schoolgis_data():
     try:
-        task = process_schoolgis_task.delay(paths)
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 10, type=int)
+        search = request.args.get('search', '')
+        city = request.args.get('city', '')
+
+        query = SchoolGIS.query
+        
+        # Filtering by the 'name' column based on your schema
+        if search:
+            query = query.filter(SchoolGIS.name.ilike(f"%{search}%"))
+        
+        if city:
+            query = query.filter(SchoolGIS.city.ilike(f"%{city}%"))
+        
+        pagination = query.paginate(page=page, per_page=limit, error_out=False)
+        
         return jsonify({
-            "status":"files_accepted",
-            "task_id": task.id
-            }), 202
+            "status": "success",
+            "data": [item.to_dict() for item in pagination.items],
+            "total_pages": pagination.pages,
+            "total_count": pagination.total,
+            "current_page": page
+        }), 200
+        
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ SchoolGIS Route Error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500

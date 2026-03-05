@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 import threading
 from extensions import db
-from model.amazon_product_model import AmazonProduct
+from model.product_model.amazon_product import AmazonProduct
 from services.scrapers.amazon_service import scrape_amazon_search
 
 amazon_api_bp = Blueprint('amazon_api_bp', __name__)
@@ -20,12 +20,11 @@ def scrape_and_insert():
         if not search_term:
             return jsonify({'error': 'search_term is required'}), 400
             
-        # Start the service in a background thread
-        # Note: scrape_amazon_search now handles its own app context
-        thread = threading.Thread(target=scrape_amazon_search, args=(search_term, pages))
-        thread.start()
+        # Start the service via Celery to avoid worker multiplication issues
+        from tasks.products_task.amazon_scraper_task import run_amazon_scraper
+        run_amazon_scraper.delay(search_term, pages)
         
-        return jsonify({"status": "started", "message": f"Scraping '{search_term}' started"}), 202
+        return jsonify({"status": "started", "message": f"Scraping '{search_term}' started via Celery"}), 202
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

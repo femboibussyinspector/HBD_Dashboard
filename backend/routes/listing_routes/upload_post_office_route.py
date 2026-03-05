@@ -1,29 +1,34 @@
-from flask import Flask,request,jsonify,Blueprint
-from tasks.listings_task.upload_post_office_task import process_post_office_task
-from werkzeug.utils import secure_filename 
-import os 
-from utils.storage import get_upload_base_dir
-
+from flask import Blueprint, request, jsonify
+from extensions import db
+from model.post_office import PostOffice
 
 post_office_bp = Blueprint('post_office_bp', __name__)
-@post_office_bp.route('/upload/post-office-data', methods=["POST"])
-def upload_post_office_route():
-    files = request.files.getlist("files")
-    if not files:
-        return jsonify({"error":"No files provided"}),400
-    UPLOAD_DIR = get_upload_base_dir()/"post_office"
-    UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
-    paths = []
-    for f in files:
-        filename = secure_filename(f.filename)
-        filepath = UPLOAD_DIR/filename
-        f.save(filepath)
-        paths.append(str(filepath))
+
+@post_office_bp.route('/fetch-data', methods=['GET'])
+def fetch_post_office_data():
     try:
-        task = process_post_office_task.delay(paths)
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 10, type=int)
+        search = request.args.get('search', '') # Search by area
+        city = request.args.get('city', '')
+
+        query = PostOffice.query
+
+        if search:
+            query = query.filter(PostOffice.area.ilike(f"%{search}%"))
+        if city:
+            query = query.filter(PostOffice.city.ilike(f"%{city}%"))
+        
+        pagination = query.paginate(page=page, per_page=limit, error_out=False)
+        
         return jsonify({
-            "status":"files_accepted",
-            "task_id": task.id
-            }), 202
+            "status": "success",
+            "data": [item.to_dict() for item in pagination.items],
+            "total_pages": pagination.pages,
+            "total_count": pagination.total,
+            "current_page": page
+        }), 200
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ PostOffice Route Error: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500

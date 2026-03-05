@@ -1,0 +1,13 @@
+CREATE TABLE `file_registry` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `drive_file_id` varchar(255) NOT NULL,
+  `filename` varchar(255) NOT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `category` varchar(100) DEFAULT NULL,
+  `status` varchar(50) DEFAULT 'pending',
+  `error_message` text,
+  `processed_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `file_hash` varchar(32) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `drive_file_id` (`drive_file_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=179142 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci

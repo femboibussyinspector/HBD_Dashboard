@@ -1,29 +1,38 @@
-from flask import Flask,request,jsonify,Blueprint
-from tasks.listings_task.upload_magicpin_task import process_magicpin_task
-from werkzeug.utils import secure_filename
-import os 
-from utils.storage import get_upload_base_dir
-
+from flask import Blueprint, request, jsonify
+from extensions import db
+from model.magicpin import MagicPin
 
 magicpin_bp = Blueprint('magicpin_bp', __name__)
-@magicpin_bp.route('/upload/magicpin-data', methods=["POST"])
-def upload_magicpin_route():
-    files = request.files.getlist("files")
-    if not files:
-        return jsonify({"error":"No files provided"}),400
-    UPLOAD_DIR = get_upload_base_dir()/"magicpin"
-    UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
-    paths = []
-    for f in files:
-        filename = secure_filename(f.filename)
-        filepath = UPLOAD_DIR/filename
-        f.save(filepath)
-        paths.append(str(filepath))
+
+@magicpin_bp.route('/fetch-data', methods=['GET'])
+def fetch_magicpin_data():
     try:
-        task = process_magicpin_task.delay(paths)
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 10, type=int)
+        search = request.args.get('search', '')
+        city = request.args.get('city', '')
+
+        query = MagicPin.query
+
+        if search:
+            query = query.filter(MagicPin.name.ilike(f"%{search}%"))
+        
+        if city:
+            query = query.filter(MagicPin.city.ilike(f"%{city}%"))
+        
+        pagination = query.paginate(page=page, per_page=limit, error_out=False)
+        
         return jsonify({
-            "status":"files_accepted",
-            "task_id": task.id
-            }), 202
+            "status": "success",
+            "data": [item.to_dict() for item in pagination.items],
+            "total_pages": pagination.pages,
+            "total_count": pagination.total,
+            "current_page": page
+        }), 200
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ MagicPin Route Error: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500

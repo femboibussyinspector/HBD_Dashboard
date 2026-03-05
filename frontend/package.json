@@ -23,6 +23,7 @@
     "react-dom": "18.2.0",
     "react-router-dom": "6.17.0",
     "react-slot-counter": "^3.3.2",
+    "recharts": "^3.7.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

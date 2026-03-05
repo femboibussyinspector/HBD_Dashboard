@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from "react";
-import ReusableTable from "../Table/ReusableTable"; 
+import ReusableTable from "../Table/ReusableTable";
 import api from "../../utils/Api";
+import {
+  Card,
+  CardHeader,
+  Typography,
+  CardBody,
+  Input,
+  Button,
+  Spinner,
+} from "@material-tailwind/react";
+import { ArrowPathIcon } from "@heroicons/react/24/solid";
 
 const MasterData = () => {
   const [data, setData] = useState([]);
@@ -12,35 +22,57 @@ const MasterData = () => {
   const limit = 1000;
   const totalPages = Math.ceil(totalRecords / limit);
 
-  // 1. DEFINE COLUMNS ONCE (Easy to reorder or hide)
+  // Define columns for master data table
   const columns = [
     { header: "ID", accessor: "id" },
-    { header: "Category", accessor: "category" },
-    { header: "City", accessor: "city" },
-    { header: "Name", accessor: "name" },
-    { header: "Area", accessor: "area" },
-    { header: "Address", accessor: "address" },
-    { header: "Phone 1", accessor: "phone_no_1" },
-    { header: "Phone 2", accessor: "phone_no_2" },
-    { header: "URL", accessor: "url" },
+    { header: "Global Business ID", accessor: "global_business_id" },
+    { header: "ASIN", accessor: "asin" },
+    { header: "IFSC", accessor: "ifsc" },
+    { header: "MICR", accessor: "micr" },
+    { header: "Business Name", accessor: "business_name" },
+    { header: "Branch Code", accessor: "branch_code" },
+    { header: "Branch", accessor: "branch" },
+    { header: "Business Category", accessor: "business_category" },
+    { header: "Business Subcategory", accessor: "business_subcategory" },
+    { header: "Price", accessor: "price" },
+    { header: "List Price", accessor: "listPrice" },
     { header: "Ratings", accessor: "ratings" },
-    { header: "Sub Category", accessor: "sub_category" },
-    { header: "State", accessor: "state" },
-    { header: "Country", accessor: "country" },
+    { header: "Stars", accessor: "stars" },
     { header: "Email", accessor: "email" },
-    { header: "Lat", accessor: "latitude" },
-    { header: "Long", accessor: "longitude" },
-    { header: "Reviews", accessor: "reviews" },
-    { header: "Facebook", accessor: "facebook_url" },
-    { header: "LinkedIn", accessor: "linkedin_url" },
-    { header: "Twitter", accessor: "twitter_url" },
-    { header: "Description", accessor: "description" },
-    { header: "Pincode", accessor: "pincode" },
+    { header: "Primary Phone", accessor: "primary_phone" },
+    { header: "Secondary Phone", accessor: "secondary_phone" },
+    { header: "Other Phones", accessor: "other_phones" },
     { header: "Virtual Phone", accessor: "virtual_phone" },
-    { header: "WhatsApp", accessor: "whatsapp_no" },
-    { header: "Phone 3", accessor: "phone_no_3" },
+    { header: "WhatsApp Phone", accessor: "whatsapp_phone" },
+    { header: "Website URL", accessor: "website_url" },
+    { header: "Is Best Seller", accessor: "isBestSeller" },
+    { header: "Bought In Last Month", accessor: "boughtInLastMonth" },
+    { header: "Image URL", accessor: "ImgUrl" },
+    { header: "Facebook URL", accessor: "facebook_url" },
+    { header: "LinkedIn URL", accessor: "linkedin_url" },
+    { header: "Twitter URL", accessor: "twitter_url" },
+    { header: "Address", accessor: "address" },
+    { header: "Area", accessor: "area" },
+    { header: "City", accessor: "city" },
+    { header: "District", accessor: "district" },
+    { header: "State", accessor: "state" },
+    { header: "Pincode", accessor: "pincode" },
+    { header: "Country", accessor: "country" },
+    { header: "Latitude", accessor: "latitude" },
+    { header: "Longitude", accessor: "longitude" },
+    { header: "Avg Fees", accessor: "avg_fees" },
+    { header: "Course Details", accessor: "course_details" },
+    { header: "Duration", accessor: "duration" },
+    { header: "Requirement", accessor: "requirement" },
     { header: "Avg Spent", accessor: "avg_spent" },
     { header: "Cost for Two", accessor: "cost_for_two" },
+    { header: "Reviews", accessor: "reviews" },
+    { header: "Description", accessor: "description" },
+    { header: "Data Source", accessor: "data_source" },
+    { header: "Avg Salary", accessor: "avg_salary" },
+    { header: "Admission Req List", accessor: "admission_req_list" },
+    { header: "Courses", accessor: "courses" },
+    { header: "Created At", accessor: "created_at" },
   ];
 
   useEffect(() => {
@@ -50,16 +82,36 @@ const MasterData = () => {
   const fetchData = async (page, searchTerm = "") => {
     setLoading(true);
     try {
-      const response = await api.get(
-        `/read_master_input/?page=${page}&limit=${limit}&search=${searchTerm}`
-      );
-   
-      // If 'api.get' returns the JSON directly, remove the .json() line below.
-      const result = await response.json(); 
+      const queryParams = new URLSearchParams({
+        page: currentPage,
+        limit: limit,
+        search: search,
+      });
+
+      const response = await fetch(`https://dashboard.cityhangaround.com/api/master_table/list?${queryParams}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
+        }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          window.location.href = "/auth/sign-in";
+          return;
+        }
+        throw new Error(`Backend failed with status ${response.status}`);
+      }
+
+      const result = await response.json();
+      
       setData(result.data || []);
-      setTotalRecords(result.total_records || 0);
-    } catch (error) {
-      console.error("Error fetching data:", error);
+      setTotalPages(result.total_pages || 1);
+      setTotalRecords(result.total_count || 0);
+    } catch (err) {
+      console.error("Fetch Error:", err);
+      setError("Failed to fetch data from backend.");
     } finally {
       setLoading(false);
     }
@@ -82,40 +134,45 @@ const MasterData = () => {
         />
       </div>
 
-      {/* TABLE AREA */}
-      <div className="bg-white shadow rounded-lg p-4">
-        {loading ? (
-          <p className="text-center text-blue-500 font-semibold">Loading data...</p>
-        ) : (
-          <>
-            {/* 2. USE THE COMPONENT (Replaces 50 lines of HTML) */}
-            <ReusableTable columns={columns} data={data} />
-
-            {/* PAGINATION CONTROLS */}
-            <div className="flex justify-center items-center mt-6 gap-2 flex-wrap">
-              <button
-                className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((p) => p - 1)}
-              >
-                Previous
-              </button>
-              
-              <span className="text-sm text-gray-600">
-                 Page {currentPage} of {totalPages}
-              </span>
-
-              <button
-                className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((p) => p + 1)}
-              >
-                Next
-              </button>
+      <Card className="border border-gray-200 rounded-xl shadow-sm bg-white overflow-hidden">
+        <CardBody className="overflow-x-auto p-0">
+          {loading ? (
+            <div className="flex flex-col justify-center py-20 items-center gap-3">
+              <Spinner className="h-10 w-10 text-blue-500" />
+              <Typography className="animate-pulse text-gray-600 font-medium">
+                Retrieving Records...
+              </Typography>
             </div>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              <ReusableTable columns={columns} data={data} />
+
+              {/* PAGINATION CONTROLS */}
+              <div className="flex justify-center items-center mt-6 gap-2 flex-wrap">
+                <button
+                  className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                >
+                  Previous
+                </button>
+                
+                <span className="text-sm text-gray-600">
+                   Page {currentPage} of {totalPages}
+                </span>
+
+                <button
+                  className="px-3 py-1 rounded bg-blue-500 text-white disabled:bg-gray-300"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            </>
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 };

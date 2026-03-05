@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 
 from .normalizer import UniversalNormalizer
 from utils.circuit_breaker import CircuitBreaker, CircuitBreakerOpenError
+from config import config
 
 load_dotenv()
 
@@ -33,16 +34,9 @@ import warnings
 warnings.filterwarnings("ignore", message="file_cache is only supported with oauth2client<4.0.0")
 
 # Configuration Constants
-# Fix 6: Move ROOT_FOLDER_ID to environment variable
 ROOT_FOLDER_ID = os.getenv('GDRIVE_ROOT_FOLDER_ID', '1ltTYjekxZsk2CdF20tSk1B2FnRn4119E')
-SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), 'honey-bee-digital-d96daf6e6faf.json')
-# DB Config
-DB_USER = os.getenv('DB_USER')
-DB_PASS = quote_plus(os.getenv('DB_PASSWORD_PLAIN') or "")
-DB_HOST = os.getenv('DB_HOST')
-DB_NAME = os.getenv('DB_NAME')
-DB_PORT = os.getenv('DB_PORT', '3306')
-DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+SERVICE_ACCOUNT_FILE = config.SERVICE_ACCOUNT_FILE
+DATABASE_URI = config.DATABASE_URI
 
 class GDriveHighSpeedIngestor:
     def __init__(self):
@@ -53,7 +47,6 @@ class GDriveHighSpeedIngestor:
         self.table_name = "raw_google_map_drive_data"
         self.task_queue = queue.Queue(maxsize=100)
         self.folder_registry = {}  # Changed to Dict {folder_id: modified_time}
-        self.processed_files = {}  # Fix 8: Dict {file_id: file_hash} instead of set
         self.shutdown_event = threading.Event()
         self.scanners_finished = threading.Event()
         self._tls = threading.local()
@@ -97,23 +90,33 @@ class GDriveHighSpeedIngestor:
         return hashlib.md5(f"{file_id}:{modified_time}".encode()).hexdigest()
 
     def load_registry(self):
-        """Load already processed file IDs + hashes, folder timestamps."""
-        logger.info("Loading Registry Checkpoints...")
+        """Load folder timestamps from the database. File tracking is now stateless."""
+        logger.debug("Loading Folder Registry Checkpoints...")
         with self.engine.connect() as conn:
-            # Load file hashes and status for high-speed change detection
-            files = conn.execute(text("SELECT drive_file_id, file_hash, status FROM file_registry"))
-            self.processed_files = {row[0]: {"hash": row[1], "status": row[2]} for row in files}
-            
+
             # Load Folder Registry (ID -> ModifiedTime)
             folders = conn.execute(text("SELECT folder_id, drive_modified_at FROM drive_folder_registry"))
             self.folder_registry = {row[0]: row[1] for row in folders}
+            
+            # Query for processed files count
+            try:
+                self.files_processed_count = conn.execute(text("SELECT COUNT(*) FROM file_registry WHERE status = 'PROCESSED'")).scalar()
+            except Exception:
+                self.files_processed_count = 0
+                
+            # Query for processed folders count
+            try:
+                self.folders_processed_count = conn.execute(text("SELECT COUNT(DISTINCT drive_folder_id) FROM file_registry WHERE status = 'PROCESSED' AND drive_folder_id IS NOT NULL")).scalar()
+            except Exception:
+                self.folders_processed_count = 0
+
             
             # Load Token
             res = conn.execute(text("SELECT meta_value FROM etl_metadata WHERE meta_key='last_change_token'"))
             row = res.fetchone()
             if row: self.page_token = row[0] if row else None
 
-        logger.info(f"Registry loaded: {len(self.processed_files)} files, {len(self.folder_registry)} folders.")
+        logger.debug(f"Registry loaded: {len(self.folder_registry)} folders, {self.files_processed_count} files processed.")
 
     def save_change_token(self, token):
         with self.engine.begin() as conn:
@@ -188,10 +191,28 @@ class GDriveHighSpeedIngestor:
             logger.warning(f"Circuit breaker OPEN, skipping list_files for {parent_id}: {e}")
             return []
 
+    def has_file_changed(self, file_id, current_hash):
+        """Stateless DB-backed check to see if a file needs processing."""
+        with self.engine.connect() as conn:
+            result = conn.execute(text("SELECT file_hash, status FROM file_registry WHERE drive_file_id = :id"), {"id": file_id}).fetchone()
+            if result:
+                # Processed successfully and hash hasn't changed = SKIP
+                if result[1] == 'PROCESSED' and result[0] == current_hash:
+                    return False
+            # Needs processing
+            return True
+
     def scanner_producer(self, folder_id, folder_name, path=""):
         if self.shutdown_event.is_set(): return
         
-        # 1. Fetch items (Already sorted by modifiedTime DESC in API call)
+        # Check if folder is already fully processed in db
+        recorded_mod = self.folder_registry.get(folder_id)
+        # If it exists, SKIP the folder entirely to prevent re-scanning 125,000 files
+        if recorded_mod:
+            logger.debug(f"⏭ SKIPPING Folder: {folder_name} (Already indexed)")
+            return
+            
+        # 1. Fetch items
         items = self.list_files(folder_id)
         
         # Separate Folders and Files to guarantee processing order
@@ -205,17 +226,14 @@ class GDriveHighSpeedIngestor:
         for item in csv_files:
             if self.shutdown_event.is_set(): break
             
-            # High-Speed Change Detection (Phase 3) using Cached Registry
+            # Stateless change detection
             current_hash = self.get_file_hash(item['id'], item.get('modifiedTime', ''))
-            cached = self.processed_files.get(item['id'], {})
-            existing_hash = cached.get('hash')
-            status = cached.get('status')
             
-            if status == 'PROCESSED' and existing_hash == current_hash:
+            if not self.has_file_changed(item['id'], current_hash):
                 folder_skipped += 1
                 continue
                 
-            # New, Modified, or Partial file -> Dispatch (Phase 2 & 3)
+            # New or modified file -> Dispatch
             from tasks.gdrive_task.etl_tasks import process_csv_task
             process_csv_task.delay(
                 file_id=item['id'], 
@@ -226,11 +244,16 @@ class GDriveHighSpeedIngestor:
                 modified_time=item.get('modifiedTime')
             )
             folder_dispatched += 1
+            logger.debug(f"[DISPATCH] {item['name']}")
 
         # Then recursively scan NEWEST SUBFOLDERS (Phase 2)
         for folder in folders:
             if self.shutdown_event.is_set(): break
             self.scanner_producer(folder['id'], folder['name'], f"{path}/{folder_name}")
+                
+        # Log Summary for this folder
+        if folder_dispatched > 0:
+            logger.debug(f"📂 [SCANNED] {folder_name}: {folder_dispatched} new tasks, {folder_skipped} skipped.")
             
         with self.stats_lock:
             self.total_scanned_folders += 1
@@ -249,18 +272,31 @@ class GDriveHighSpeedIngestor:
         start_time = time.time()
         self.load_registry()
         
-        logger.info("="*60)
-        logger.info(f"📊 [STARTUP SUMMARY]")
-        logger.info(f"   - Processed Files in DB: {len(self.processed_files)}")
-        logger.info(f"   - Registered Folders:    {len(self.folder_registry)}")
-        logger.info("="*60)
+        processed_f = getattr(self, 'folders_processed_count', 0)
+        remaining_f = len(self.folder_registry) - processed_f
+        
+        if self.first_run:
+            logger.info("="*60)
+            logger.info(f"📊 [STARTUP SUMMARY]")
+            logger.info(f"   - Registered Folders:    {len(self.folder_registry)}")
+            logger.info(f"   - Processed Folders:     {processed_f}")
+            logger.info(f"   - Remaining Folders:     {remaining_f}")
+            logger.info(f"   - Files Processed:       {getattr(self, 'files_processed_count', 0)}")
+            logger.info("="*60)
+        else:
+            logger.debug("="*60)
+            logger.debug(f"📊 [CYCLE SUMMARY]")
+            logger.debug(f"   - Registered Folders:    {len(self.folder_registry)}")
+            logger.debug(f"   - Processed Folders:     {processed_f}")
+            logger.debug(f"   - Remaining Folders:     {remaining_f}")
+            logger.debug(f"   - Files Processed:       {getattr(self, 'files_processed_count', 0)}")
+            logger.debug("="*60)
         
         self.scanners_finished.clear()
         
         # Reset Stats for new run
         with self.stats_lock:
             self.total_scanned_folders = 0
-            self.total_skipped_folders = 0
             self.total_dispatched_files = 0
             
         # 1. INITIAL FULL SCAN (Only on first start)
@@ -270,7 +306,7 @@ class GDriveHighSpeedIngestor:
                 r = redis.Redis(host='localhost', port=6379, db=0)
                 r.set('celery_files_processed', 0)
                 r.set('celery_rows_inserted', 0)
-                logger.info("🔄 Redis Counters Reset (files & rows)")
+                logger.debug("🔄 Redis Counters Reset (files & rows)")
             except Exception as e:
                 logger.warning(f"⚠️ Failed to reset Redis counters: {e}")
 
@@ -280,7 +316,10 @@ class GDriveHighSpeedIngestor:
             # Reduced workers for scanning to avoid overhead.
             with ThreadPoolExecutor(max_workers=8) as executor:
                 futures = [executor.submit(self.scanner_producer, f['id'], f['name'], "ROOT") for f in top_folders]
-                for f in as_completed(futures): pass
+                for f in as_completed(futures):
+                    if self.shutdown_event.is_set():
+                        logger.info("Shutdown requested. Cancelling remaining scanners.")
+                        break
                 self.scanners_finished.set()
             
             # Removed redundant Producer-side stats refresh (handled by Celery now)
@@ -289,7 +328,6 @@ class GDriveHighSpeedIngestor:
             logger.info("="*60)
             logger.info(f"✅ Initial Scan Complete in {time.time() - start_time:.2f}s")
             logger.info(f"   - Total Folders Scanned: {self.total_scanned_folders}")
-            logger.info(f"   - Total Folders Skipped: {self.total_skipped_folders}")
             logger.info(f"   - Total Files Dispatched: {self.total_dispatched_files}")
             logger.info("="*60)
             return
@@ -297,7 +335,7 @@ class GDriveHighSpeedIngestor:
         # 2. REACTIVE TARGETED SYNC
         changes = self.get_changes()
         if not changes:
-            logger.info("⚡ System Idle... No new changes detected.")
+            logger.debug("⚡ System Idle... No new changes detected.")
             return
 
         logger.info(f"🚀 Reactive Trigger! Disptaching {len(changes)} updates to Celery...")
@@ -313,7 +351,8 @@ class GDriveHighSpeedIngestor:
             
             # Identify what changed
             if file.get('name', '').lower().endswith('.csv'):
-                if file['id'] not in self.processed_files:
+                file_hash = self.get_file_hash(file['id'], file.get('modifiedTime', ''))
+                if self.has_file_changed(file['id'], file_hash):
                      logger.debug(f"🆕 REACTIVE TASK: {file['name']}")
                      process_csv_task.delay(
                         file_id=file['id'], 
@@ -338,12 +377,13 @@ class GDriveHighSpeedIngestor:
             logger.info(f"📂 Scanning {len(folders_to_scan)} unique reactive folders...")
 
             with ThreadPoolExecutor(max_workers=8) as executor:
-                for f in folders_to_scan:
-                    executor.submit(self.scanner_producer, f['id'], f['name'], "REACTIVE")
+                futures = [executor.submit(self.scanner_producer, f['id'], f['name'], "REACTIVE") for f in folders_to_scan]
+                for f in as_completed(futures):
+                    if self.shutdown_event.is_set():
+                        break
             
         self.save_change_token(self.page_token)
         logger.info(f"✨ Reactive Cycle dispatched in {time.time() - start_time:.2f}s")
-
 
 class ValidationQualityProcessor:
     """
@@ -357,6 +397,13 @@ class ValidationQualityProcessor:
         self.batch_size = 2000 # Smaller batch for stability
         self.consecutive_errors = 0
         self.max_backoff = 60  # Max sleep on consecutive errors
+        # Aggregated counters for periodic summary logging
+        self._agg_total = 0
+        self._agg_valid = 0
+        self._agg_missing = 0
+        self._agg_dup = 0
+        self._agg_cleaned = 0
+        self._agg_batches = 0
 
     @staticmethod
     def safe_str(val, default=""):
@@ -514,7 +561,7 @@ class ValidationQualityProcessor:
                     rows = conn.execute(text("""
                         SELECT id, name, address, website, phone_number, 
                                 reviews_count, reviews_average, category, subcategory, 
-                                city, state, area, created_at
+                                city, state, area
                         FROM raw_google_map_drive_data 
                         WHERE id > :last_id 
                         ORDER BY id ASC 
@@ -637,7 +684,7 @@ class ValidationQualityProcessor:
                     if clean_data_batch:
                         try:
                             conn.execute(text("""
-                                INSERT IGNORE INTO raw_clean_google_map_data 
+                                INSERT IGNORE INTO validation_raw_google_map 
                                 (raw_id, name, address, website, phone_number, reviews_count, reviews_avg,
                                  category, subcategory, city, state, area, created_at,
                                  validation_status, cleaning_status, missing_fields, invalid_format_fields, duplicate_reason, processed_at)
@@ -664,7 +711,20 @@ class ValidationQualityProcessor:
                 last_id = current_max_id
                 self.consecutive_errors = 0  # Reset on success
                 
-                logger.info(f"Quality Cycle Complete: Processed {batch_summary['total']} | Valid: {batch_summary['valid']} | Missing: {batch_summary['missing']} | Dup: {batch_summary['duplicate']} | Master: {batch_summary['cleaned']} | Last ID: {last_id}")
+                # Aggregate counters for periodic summary
+                self._agg_total += batch_summary['total']
+                self._agg_valid += batch_summary['valid']
+                self._agg_missing += batch_summary['missing']
+                self._agg_dup += batch_summary['duplicate']
+                self._agg_cleaned += batch_summary['cleaned']
+                self._agg_batches += 1
+                
+                # Per-batch detail goes to DEBUG (log file only)
+                logger.debug(f"Quality Cycle Complete: Processed {batch_summary['total']} | Valid: {batch_summary['valid']} | Missing: {batch_summary['missing']} | Dup: {batch_summary['duplicate']} | Master: {batch_summary['cleaned']} | Last ID: {last_id}")
+                
+                # Print summary to console every 50 batches (~100K rows)
+                if self._agg_batches % 50 == 0:
+                    logger.info(f"⚡ Validation Progress: {self._agg_total:,} rows | Valid: {self._agg_valid:,} | Missing: {self._agg_missing:,} | Dup: {self._agg_dup:,} | Master: {self._agg_cleaned:,} | Last ID: {last_id}")
 
             except Exception as e:
                 self.consecutive_errors += 1

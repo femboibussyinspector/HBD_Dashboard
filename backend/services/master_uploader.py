@@ -20,7 +20,6 @@ def upload_master_csv(file_paths, session, report):
     missing_email = 0
     missing_address = 0
     
-    # City matching counters
     city_matched = 0
     city_unmatched = 0
 
@@ -28,13 +27,13 @@ def upload_master_csv(file_paths, session, report):
     area_set = set()
     category_set = set()
     
-    # Load valid cities from master_table (one-time query)
     valid_cities = _load_valid_cities(session)
 
     connection = session.connection()
     cursor = connection.connection.cursor()
     
-    non_essential_indexes = ['business_category', 'area', 'city', 'email', 'data_source', 'created_at']
+    # Updated non-essential indexes based on the new schema
+    non_essential_indexes = ['business_category', 'area', 'city', 'district', 'email', 'data_source', 'asin', 'ifsc', 'created_at']
     
     try:
         print("🔧 Dropping indexes...")
@@ -60,42 +59,46 @@ def upload_master_csv(file_paths, session, report):
                     email = safe_get(row, "email")
                     address = safe_get(row, "address")
                     
-                    if not primary_phone:
-                        missing_phone += 1
-                    if not email:
-                        missing_email += 1
-                    if not address:
-                        missing_address += 1
+                    if not primary_phone: missing_phone += 1
+                    if not email: missing_email += 1
+                    if not address: missing_address += 1
 
                     city = safe_get(row, "city")
                     area = safe_get(row, "area")
                     category = safe_get(row, "business_category")
                     
-                    # ✅ City matching check with in-memory update
                     if city:
                         city_lower = city.lower().strip()
-                        
                         if city_lower in valid_cities:
                             city_matched += 1
                         else:
                             city_unmatched += 1
-                            # Add new city to in-memory set for future matches
                             valid_cities.add(city_lower)
-                        
                         city_set.add(city)
                     
-                    if area:
-                        area_set.add(area)
-                    if category:
-                        category_set.add(category)
+                    if area: area_set.add(area)
+                    if category: category_set.add(category)
 
+                    # ✅ ADDED ALL NEW COLUMNS HERE
                     batch.append({
                         "global_business_id": global_id,
                         "business_id": safe_get(row, "business_id"),
+                        "asin": safe_get(row, "asin"),
+                        "ifsc": safe_get(row, "ifsc"),
+                        "micr": safe_get(row, "micr"),
+                        "branch_code": safe_get(row, "branch_code"),
+                        "branch": safe_get(row, "branch"),
+                        "price": clean_data_decimal(safe_get(row, "price")),
+                        "listPrice": clean_data_decimal(safe_get(row, "listPrice")),
+                        "isBestSeller": safe_get(row, "isBestSeller"),
+                        "boughtInLastMonth": safe_get(row, "boughtInLastMonth"),
+                        "ImgUrl": safe_get(row, "ImgUrl"),
                         "business_name": safe_get(row, "business_name"),
                         "business_category": category,
                         "business_subcategory": safe_get(row, "business_subcategory"),
                         "ratings": clean_data_decimal(safe_get(row, "ratings")),
+                        "stars": safe_get(row, "stars"),
+                        "reviews": clean_data_decimal(safe_get(row, "reviews")),
                         "primary_phone": primary_phone,
                         "secondary_phone": clean_data_decimal(safe_get(row, "secondary_phone")),
                         "other_phones": clean_data_decimal(safe_get(row, "other_phones")),
@@ -103,28 +106,27 @@ def upload_master_csv(file_paths, session, report):
                         "whatsapp_phone": clean_data_decimal(safe_get(row, "whatsapp_phone")),
                         "email": email,
                         "website_url": safe_get(row, "website_url"),
+                        "facebook_url": safe_get(row, "facebook_url"),
+                        "linkedin_url": safe_get(row, "linkedin_url"),
+                        "twitter_url": safe_get(row, "twitter_url"),
                         "address": address,
                         "area": area,
                         "city": city,
+                        "district": safe_get(row, "district"),
                         "state": safe_get(row, "state") or "Unknown",
                         "pincode": clean_data_decimal(safe_get(row, "pincode")),
                         "country": safe_get(row, "country") or "India",
-                        "data_source": "CSV"
+                        "data_source": safe_get(row, "data_source") or "CSV"
                     })
 
                     if len(batch) >= BATCH_SIZE:
-                        print(f"📝 Processing: {total_processed}")
                         ins = _commit_batch_upsert(batch, session)
                         inserted += ins
                         batch.clear()
                     
-                    # Har 50K rows pe commit
                     if rows_since_commit >= 50000:
-                        print(f"💾 Committing at {total_processed} rows...")
                         session.commit()
                         rows_since_commit = 0
-                        
-                        # Report update
                         _update_report(session, report, total_processed, inserted, 
                                      city_set, area_set, category_set, 
                                      missing_phone, missing_email, missing_address,
@@ -134,7 +136,6 @@ def upload_master_csv(file_paths, session, report):
                     ins = _commit_batch_upsert(batch, session)
                     inserted += ins
         
-        # Final commit
         session.commit()
 
     finally:
@@ -152,33 +153,37 @@ def upload_master_csv(file_paths, session, report):
                  missing_phone, missing_email, missing_address,
                  city_matched, city_unmatched)
 
-
 def _load_valid_cities(session):
-    """Load unique cities from master_table (one-time query)"""
     try:
-        result = session.query(
-            func.lower(MasterTable.city)
-        ).distinct().all()
-        
+        result = session.query(func.lower(MasterTable.city)).distinct().all()
         return {city[0].strip() for city in result if city[0]}
     except Exception as e:
         print(f"⚠️ Error loading cities: {e}")
         return set()
 
-
 def _commit_batch_upsert(batch, session):
     try:
         stmt = insert(MasterTable).values(batch)
         
+        # ✅ UPDATED DICT TO INCLUDE NEW FIELDS ON DUPLICATE UPDATE
         update_dict = {
             "business_name": stmt.inserted.business_name,
             "business_category": stmt.inserted.business_category,
+            "business_subcategory": stmt.inserted.business_subcategory,
+            "price": stmt.inserted.price,
+            "ImgUrl": stmt.inserted.ImgUrl,
             "ratings": stmt.inserted.ratings,
+            "reviews": stmt.inserted.reviews,
             "primary_phone": stmt.inserted.primary_phone,
+            "secondary_phone": stmt.inserted.secondary_phone,
             "email": stmt.inserted.email,
+            "website_url": stmt.inserted.website_url,
             "address": stmt.inserted.address,
+            "area": stmt.inserted.area,
             "city": stmt.inserted.city,
+            "district": stmt.inserted.district,
             "state": stmt.inserted.state,
+            "pincode": stmt.inserted.pincode,
         }
         
         stmt = stmt.on_duplicate_key_update(**update_dict)
@@ -191,7 +196,6 @@ def _commit_batch_upsert(batch, session):
         session.rollback()
         print(f"❌ Error: {str(e)[:100]}")
         raise
-
 
 def _update_report(session, report, total_processed, inserted, city_set, area_set, 
                   category_set, missing_phone, missing_email, missing_address,

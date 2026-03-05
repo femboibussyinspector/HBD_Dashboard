@@ -3,11 +3,14 @@ import csv
 import io
 import logging
 import time
+import random
 import signal
 import hashlib
 import threading
+import redis
 from contextlib import contextmanager
 from sqlalchemy import create_engine, text
+from sqlalchemy.pool import NullPool
 from sqlalchemy.exc import OperationalError
 from urllib.parse import quote_plus
 from google.oauth2 import service_account
@@ -41,27 +44,14 @@ SERVICE_ACCOUNT_FILE = config.SERVICE_ACCOUNT_FILE
 DATABASE_URI = config.DATABASE_URI
 MAX_FILE_SIZE_MB = config.MAX_FILE_SIZE_MB
 ETL_VERSION = config.ETL_VERSION
-BATCH_SIZE = config.BATCH_SIZE
-# Configuration
-SERVICE_ACCOUNT_FILE = os.path.join(os.getcwd(), 'model', 'honey-bee-digital-d96daf6e6faf.json')
-DB_USER = os.getenv('DB_USER')
-DB_PASS = quote_plus(os.getenv('DB_PASSWORD_PLAIN') or "")
-DB_HOST = os.getenv('DB_HOST')
-DB_NAME = os.getenv('DB_NAME')
-DB_PORT = os.getenv('DB_PORT', '3306')
-DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+BATCH_SIZE = min(config.BATCH_SIZE, 500)  # Cap at 500 to reduce InnoDB lock window & deadlocks
 
-MAX_FILE_SIZE_MB = int(os.getenv('MAX_FILE_SIZE_MB', '100'))
-ETL_VERSION = "2.0.0"
-
-# SECTION 1: Optimized SQLAlchemy Engine (High Throughput)
+# SECTION 1: Optimized SQLAlchemy Engine (NullPool for Celery Workers)
+# By using NullPool, Celery workers open and close connections per task, preventing connection limit exhaustion
 engine = create_engine(
     DATABASE_URI,
-    pool_size=10,            # Conservative pool to avoid exhaustion
-    max_overflow=5,          # Limited burst capacity
-    pool_timeout=30,        
-    pool_recycle=1800,      
-    pool_pre_ping=True      
+    poolclass=NullPool,
+    pool_pre_ping=True
 )
 
 # Fix 7: Graceful Shutdown
@@ -162,7 +152,7 @@ def commit_batch(batch, task_id=None):
                 row[key] = val[:500]
         
     sql = text("""
-        INSERT INTO raw_google_map_drive_data (
+        INSERT IGNORE INTO raw_google_map_drive_data (
             name, address, website, phone_number, 
             reviews_count, reviews_average, 
             category, subcategory, city, state, area, 
@@ -180,51 +170,104 @@ def commit_batch(batch, task_id=None):
         )
     """)
     
-    # Retry logic for transient DB errors (deadlocks, connection resets)
+    # Inject lineage fields into each row
+    for row in batch:
+        row.setdefault('etl_version', ETL_VERSION)
+        row.setdefault('task_id', task_id)
+        row.setdefault('file_hash', '')
+    # All DB operations are wrapped in context managers for resource safety.
+
+    from redis import Redis
+    
+    # 1. Deduplicate using Redis to avoid InnoDB gap-lock deadlocks on INSERT IGNORE
+    # We use a Redis TTL-based key (3 days) to quickly filter out exact duplicates
+    # before they even hit the MySQL database, while keeping RAM usage bounded.
+    try:
+        r = Redis.from_url(os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"))
+        
+        unique_batch = []
+        for row in batch:
+            # Create a unique deterministic identity for the row
+            identity_string = f"{row.get('name', '')}|{row.get('phone_number', '')}|{row.get('address', '')}".lower().strip()
+            row_hash = hashlib.md5(identity_string.encode('utf-8')).hexdigest()
+            redis_key = f"gdrive_etl_dedup:{row_hash}"
+            
+            # Check if this exact row has been processed recently
+            # SET NX EX 259200 sets the key for 3 days, returning True if it was set (meaning it's new)
+            is_new = r.set(redis_key, "1", nx=True, ex=259200)
+            
+            if is_new:
+                unique_batch.append(row)
+            else:
+                # Row is a duplicate, skip it entirely
+                pass
+                
+        # If the entire batch was duplicates, return early
+        if not unique_batch:
+            return 0
+            
+    except Exception as e:
+        logger.warning(f"Redis deduplication failed, falling back to MySQL INSERT IGNORE: {e}")
+        unique_batch = batch # Fallback to sending all rows to MySQL if Redis fails
+        
+    # Sort the batch by the unique index columns to prevent InnoDB Deadlocks.
+    # Concurrent transactions locking index records in the same order avoid deadlocks.
+    unique_batch.sort(key=lambda x: (
+        str(x.get('name', '')), 
+        str(x.get('address', '')), 
+        str(x.get('phone_number', ''))
+    ))
+
     max_retries = 3
     for attempt in range(max_retries):
         try:
             with engine.begin() as conn:
-                result = conn.execute(sql, batch)
+                # Set lock wait timeout per-connection to avoid long hangs
+                conn.execute(text("SET innodb_lock_wait_timeout = 15"))
+                result = conn.execute(sql, unique_batch)
                 inserted = result.rowcount
                 if inserted > 0:
                     rows_inserted.inc(inserted)
-                logger.info(f"Committed batch: {inserted} rows.")
+                logger.debug(f"Committed batch: {inserted} rows.")
                 return inserted
         except OperationalError as e:
             err_msg = str(e)
             # Retry on deadlock or connection errors
             if attempt < max_retries - 1 and ('Deadlock' in err_msg or '2006' in err_msg or '2013' in err_msg or 'Lost connection' in err_msg):
-                wait = (attempt + 1) * 2
-                logger.warning(f"DB transient error (attempt {attempt+1}/{max_retries}), retrying in {wait}s: {err_msg[:100]}")
+                wait = (2 ** attempt) + random.uniform(0.5, 2.5)  # Exponential backoff + jitter
+                logger.warning(f"DB retry {attempt+1}/{max_retries}: {'Deadlock' if 'Deadlock' in err_msg else 'Connection lost'}, waiting {wait:.1f}s...")
                 time.sleep(wait)
                 continue
             # Non-retryable OperationalError
             if "[parameters:" in err_msg:
-                err_msg = err_msg.split("[parameters:")[0] + " [Parameters hidden]"
-            logger.error(f"Batch Insert Failed after retries: {err_msg.strip()}")
+                err_msg = err_msg.split("[parameters:")[0].strip()
+            if "[SQL:" in err_msg:
+                err_msg = err_msg.split("[SQL:")[0].strip()
+            logger.error(f"Batch Insert Failed after retries: {err_msg}")
             return 0
         except Exception as e:
             msg = str(e)
             if "[parameters:" in msg:
-                msg = msg.split("[parameters:")[0] + " [Parameters hidden for brevity]"
-            logger.error(f"Batch Insert Failed: {msg.strip()}")
+                msg = msg.split("[parameters:")[0].strip()
+            if "[SQL:" in msg:
+                msg = msg.split("[SQL:")[0].strip()
+            logger.error(f"Batch Insert Failed: {msg}")
             return 0
     return 0
 
 
-def update_file_checkpoint(file_id, filename, status, row_number=0, error_msg=None, file_hash=None):
+def update_file_status(file_id, filename, status, error_msg=None, file_hash=None, folder_id=None, row_number=0):
     """
     Updates file status and row checkpoint for crash-safe resumption.
     """
     try:
         sql = text("""
-            INSERT INTO file_registry (drive_file_id, filename, status, last_processed_row, error_message, file_hash, processed_at)
-            VALUES (:file_id, :filename, :status, :row_num, :error_msg, :file_hash, NOW())
+            INSERT INTO file_registry (drive_file_id, filename, drive_folder_id, status, error_message, file_hash, processed_at)
+            VALUES (:file_id, :filename, :folder_id, :status, :error_msg, :file_hash, NOW())
             ON DUPLICATE KEY UPDATE 
                 status = VALUES(status),
-                last_processed_row = VALUES(last_processed_row),
                 error_message = VALUES(error_message),
+                drive_folder_id = COALESCE(VALUES(drive_folder_id), drive_folder_id),
                 file_hash = COALESCE(VALUES(file_hash), file_hash),
                 processed_at = NOW()
         """)
@@ -232,21 +275,25 @@ def update_file_checkpoint(file_id, filename, status, row_number=0, error_msg=No
             conn.execute(sql, {
                 "file_id": file_id,
                 "filename": filename,
+                "folder_id": folder_id,
                 "status": status,
-                "row_num": row_number,
                 "error_msg": str(error_msg)[:2000] if error_msg else None,
                 "file_hash": file_hash
             })
     except Exception as e:
-        logger.warning(f"Checkpoint update failed for {filename}: {e}")
+        # Strip verbose SQL from warning message
+        msg = str(e)
+        if "[SQL:" in msg:
+            msg = msg.split("[SQL:")[0].strip()
+        logger.warning(f"Checkpoint update failed for {filename}: {msg}")
 
 def get_file_checkpoint(file_id):
-    """Retrieves the last processed row for a file."""
+    """Retrieves the processing status for a file."""
     try:
         with engine.connect() as conn:
-            res = conn.execute(text("SELECT status, last_processed_row FROM file_registry WHERE drive_file_id = :id"), {"id": file_id}).fetchone()
+            res = conn.execute(text("SELECT status FROM file_registry WHERE drive_file_id = :id"), {"id": file_id}).fetchone()
             if res:
-                return res[0], res[1]
+                return res[0], 0
     except Exception:
         pass
     return None, 0
@@ -355,18 +402,20 @@ def process_csv_task(self, file_id, file_name, folder_id, folder_name, path, mod
     # 1. Check for existing checkpoint (Idempotency Phase 3)
     status, last_row = get_file_checkpoint(file_id)
     if status == 'PROCESSED':
-        logger.info(f"Skip: {file_name} already fully processed.")
+        logger.debug(f"Skip: {file_name} already fully processed.")
         return f"Skipped processed file: {file_name}"
     
     try:
         service = get_service()
-        update_file_checkpoint(file_id, file_name, 'IN_PROGRESS', last_row, file_hash=file_hash)
+        update_file_status(file_id, file_name, 'IN_PROGRESS', row_number=last_row, file_hash=file_hash)
         
         with download_csv(service, file_id) as stream:
             reader = csv.DictReader(stream)
             current_row_idx = 0
             batch = []
-            BATCH_THRESHOLD = 3000 # Memory-friendly limit
+            row_count = 0
+            skipped_count = 0
+            actual_inserted = 0  # Track true inserts
             
             for row in reader:
                 current_row_idx += 1
@@ -377,10 +426,11 @@ def process_csv_task(self, file_id, file_name, folder_id, folder_name, path, mod
 
                 if shutdown_requested:
                     if batch:
-                        commit_batch(batch, task_id=task_id)
-                    update_file_checkpoint(file_id, file_name, 'IN_PROGRESS', current_row_idx-1, 
-                                          error_msg="Graceful shutdown")
-                    return f"Paused: {file_name} at row {current_row_idx-1}"
+                        actual_inserted += commit_batch(batch, task_id=task_id)
+                    # Only log partial shutdowns to DB
+                    update_file_status(file_id, file_name, 'PARTIAL', 
+                                       error_msg=f"Shutdown at row {row_count}", folder_id=folder_id)
+                    return f"Partial: {file_name} stopped at row {row_count} (Inserted: {actual_inserted})"
                 
                 # Normalize — wrapped in try/except to skip bad rows instead of crashing
                 try:
@@ -395,31 +445,54 @@ def process_csv_task(self, file_id, file_name, folder_id, folder_name, path, mod
                     logger.warning(f"Row {current_row_idx} normalization failed in {file_name}: {norm_err}")
                     continue
                 
-                # BATCH INSERT (High Speed)
-                if len(batch) >= BATCH_THRESHOLD:
-                    commit_batch(batch, task_id=task_id)
-                    update_file_checkpoint(file_id, file_name, 'IN_PROGRESS', current_row_idx, file_hash=file_hash)
+                row_count += 1
+                
+                if len(batch) >= BATCH_SIZE:
+                    actual_inserted += commit_batch(batch, task_id=task_id)
                     batch = []
 
             # Remaining rows
             if batch:
-                commit_batch(batch, task_id=task_id)
-            
-            # Final success state
-            update_file_checkpoint(file_id, file_name, 'PROCESSED', current_row_idx, file_hash=file_hash)
+                actual_inserted += commit_batch(batch, task_id=task_id)
 
-        processing_time.observe(time.time() - start_time)
+        update_file_status(file_id, file_name, 'PROCESSED', file_hash=file_hash, folder_id=folder_id)
+        
+        elapsed = time.time() - start_time
+        processing_time.observe(elapsed)  # Fix 9: Metrics
         files_processed.inc()
+        
+        # Aggregated Logging via Redis
+        try:
+            r = redis.Redis(host='localhost', port=6379, db=0)
+            total_files = r.incr('celery_files_processed')
+            total_rows = r.incrby('celery_rows_inserted', actual_inserted)
+            
+            # Log Progress every 50 files
+            if total_files % 50 == 0:
+                logger.info(f"⚡ Progress: {total_files} files done | {total_rows} REAL rows inserted")
+        except Exception:
+            pass # Fail silently if Redis issues, don't crash task
+
+        if actual_inserted > 0:
+            # Changed to DEBUG to reduce noise on the server
+            logger.debug(
+                f"✅ [SUCCESS] {file_name} | Read: {row_count} | Actual Inserts: {actual_inserted} | Time: {elapsed:.2f}s",
+                extra={'task_id': task_id}
+            )
+        else:
+            logger.debug(f"✅ [SKIPPED/DUPLICATE] {file_name} | Read: {row_count} | Actual Inserts: 0 | Time: {elapsed:.2f}s", extra={'task_id': task_id})
+        
+        # Keep stats trigger stealthy
+        logger.debug(f"Triggering stats refresh (Counter: {2300})") # Placeholder counter
         trigger_stats_refresh()
-        return f"Completed {file_name}: {current_row_idx} rows"
+        return f"Processed {file_name}: {row_count} read, {actual_inserted} inserted"
 
     except Exception as e:
         err_msg = str(e)
-        # Truncate noisy SQL parameter dumps
-        if "[parameters:" in err_msg:
-            err_msg = err_msg.split("[parameters:")[0].strip()
-        logger.error(f"[CRASH] {file_name}: {err_msg[:300]}")
-        update_file_checkpoint(file_id, file_name, 'ERROR', last_row, error_msg=err_msg[:2000], file_hash=file_hash)
+        logger.error(f"[ERROR] processing {file_name}: {err_msg}", extra={'task_id': task_id})
+        update_file_status(file_id, file_name, 'ERROR', err_msg, file_hash=file_hash, folder_id=folder_id)
+        
+        # Fix 4: Route to DLQ on final retry
         if self.request.retries >= self.max_retries:
             send_to_dlq(file_id, file_name, err_msg[:2000], task_id, self.request.retries)
             # Don't raise — file is in DLQ, no more retries

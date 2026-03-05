@@ -56,10 +56,8 @@ class Config:
         "SERVICE_ACCOUNT_FILE",
         os.path.join(os.getcwd(), "model", "honey-bee-digital-d96daf6e6faf.json")
     )
-    
     # Define a single source for the database URI to avoid confusion and errors
     DATABASE_URI = SQLALCHEMY_DATABASE_URI
-    
     MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "100"))
     ETL_VERSION = os.getenv("ETL_VERSION", "2.0.0")
     BATCH_SIZE = int(os.getenv("BATCH_SIZE", "2000"))
