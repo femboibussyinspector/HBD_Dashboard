@@ -101,8 +101,9 @@ from routes.product_routes.upload_jio_mart_route import jiomart_bp
 from routes.gdrive_etl_routes.validation_dashboard import validation_dashboard_bp
 from routes.gdrive_etl_routes.dashboard_stats import dashboard_bp
 
-# --- Initialize App ---
-load_dotenv()
+# Load environment variables
+_env_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(_env_path, override=True)
 app = Flask(__name__)
 app.config.from_object(Config)
 
@@ -214,7 +215,10 @@ def index():
     return jsonify({"message": "Flask API is running! Clean and Modular."})
 
 if __name__ == '__main__':
-    print("🔗 Starting Flask API Server (Background tasks are handled by worker_etl.py and Celery)...")
+    # Ensure env is loaded before anything else
+    _env_path = os.path.join(os.path.dirname(__file__), '.env')
+    load_dotenv(_env_path, override=True)
+    print("🔗 Starting Flask API Server...")
 
     import sys
     # Handle the --runserver flag
