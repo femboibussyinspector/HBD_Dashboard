@@ -7,6 +7,7 @@ from utils.safe_get import safe_get
 from utils.drop_non_essential_indexes import drop_non_essential_indexes
 from utils.create_non_essential_indexes import create_non_essential_indexes
 from utils.clean_data_decimal import clean_data_decimal
+from services.location_validator_service import extract_location_from_address, get_canonical_location
 
 CHUNK_SIZE = 2000
 BATCH_SIZE = 100
@@ -115,6 +116,56 @@ def upload_master_csv(file_paths, session, report):
                         "district": safe_get(row, "district"),
                         "state": safe_get(row, "state") or "Unknown",
                         "pincode": clean_data_decimal(safe_get(row, "pincode")),
+                    }
+                    
+                    # --- Location Validation & Fix ---
+                    # 1. Initial extraction from address if missing
+                    ext_area, ext_city, ext_state, ext_pin = extract_location_from_address(address)
+                    
+                    current_area = area or ext_area
+                    current_city = city or ext_city
+                    current_state = safe_get(row, "state") if safe_get(row, "state") not in [None, '', 'Unknown', 'India'] else ext_state
+                    current_pin = clean_data_decimal(safe_get(row, "pincode")) or ext_pin
+                    
+                    # 2. Canonical lookup (pass session for DB access)
+                    canonical = get_canonical_location(session, current_area, current_city, current_state, current_pin)
+                    
+                    # --- Prepare Batch Record ---
+                    batch.append({
+                        "global_business_id": global_id,
+                        "business_id": safe_get(row, "business_id"),
+                        "asin": safe_get(row, "asin"),
+                        "ifsc": safe_get(row, "ifsc"),
+                        "micr": safe_get(row, "micr"),
+                        "branch_code": safe_get(row, "branch_code"),
+                        "branch": safe_get(row, "branch"),
+                        "price": clean_data_decimal(safe_get(row, "price")),
+                        "listPrice": clean_data_decimal(safe_get(row, "listPrice")),
+                        "isBestSeller": safe_get(row, "isBestSeller"),
+                        "boughtInLastMonth": safe_get(row, "boughtInLastMonth"),
+                        "ImgUrl": safe_get(row, "ImgUrl"),
+                        "business_name": safe_get(row, "business_name"),
+                        "business_category": category,
+                        "business_subcategory": safe_get(row, "business_subcategory"),
+                        "ratings": clean_data_decimal(safe_get(row, "ratings")),
+                        "stars": safe_get(row, "stars"),
+                        "reviews": clean_data_decimal(safe_get(row, "reviews")),
+                        "primary_phone": primary_phone,
+                        "secondary_phone": clean_data_decimal(safe_get(row, "secondary_phone")),
+                        "other_phones": clean_data_decimal(safe_get(row, "other_phones")),
+                        "virtual_phone": clean_data_decimal(safe_get(row, "virtual_phone")),
+                        "whatsapp_phone": clean_data_decimal(safe_get(row, "whatsapp_phone")),
+                        "email": email,
+                        "website_url": safe_get(row, "website_url"),
+                        "facebook_url": safe_get(row, "facebook_url"),
+                        "linkedin_url": safe_get(row, "linkedin_url"),
+                        "twitter_url": safe_get(row, "twitter_url"),
+                        "address": address,
+                        "area": canonical['area'] or area,
+                        "city": canonical['city'] or city,
+                        "district": safe_get(row, "district"),
+                        "state": canonical['state'] or safe_get(row, "state") or "Unknown",
+                        "pincode": canonical['pincode'] or clean_data_decimal(safe_get(row, "pincode")),
                         "country": safe_get(row, "country") or "India",
                         "data_source": safe_get(row, "data_source") or "CSV"
                     })
