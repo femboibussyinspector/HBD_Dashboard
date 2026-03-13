@@ -17,20 +17,52 @@ const MasterDataDashboard = () => {
   const [searchParams] = useSearchParams();
   const taskId = searchParams.get("task_id");
   const [dashboardData, setDashboardData] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const baseUrl = import.meta.env.DEV ? "/api" : (import.meta.env.VITE_API_URL || "");
         const query = taskId ? `?task_id=${taskId}` : "";
-        const response = await fetch(`https://dashboard.cityhangaround.com/api/master-dashboard-stats${query}`, {
+        const url = `${baseUrl}/master-dashboard-stats${query}`;
+
+        const response = await fetch(url, {
           headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
         });
+
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+
         const result = await response.json();
-        if (result.status === "COMPLETED") setDashboardData(result.stats);
-      } catch (err) { console.error("Fetch error:", err); }
+
+        // Accept any shape where stats exist (some deployments may use a different status key)
+        if (result.stats) {
+          setDashboardData(result.stats);
+          setError(null);
+        } else if (result.status === "COMPLETED" && result.stats) {
+          setDashboardData(result.stats);
+          setError(null);
+        } else {
+          const msg = result.message || "Unexpected response from server";
+          throw new Error(msg);
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+        setError(err.message || "Unknown error");
+        setDashboardData(null);
+      }
     };
+
     fetchData();
   }, [taskId]);
+
+  if (error) return (
+    <div className="flex h-screen items-center justify-center bg-gray-50 flex-col px-4 text-center">
+      <div className="text-red-600 font-bold text-xl mb-3">Failed to load registry data</div>
+      <div className="text-sm text-gray-600 max-w-md">{error}</div>
+    </div>
+  );
 
   if (!dashboardData) return (
     <div className="flex h-screen items-center justify-center bg-gray-50 flex-col">

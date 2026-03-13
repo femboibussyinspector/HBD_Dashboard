@@ -82,13 +82,14 @@ const MasterData = () => {
   const fetchData = async (page, searchTerm = "") => {
     setLoading(true);
     try {
+      const apiBase = import.meta.env.DEV ? "/api" : (import.meta.env.VITE_API_URL || "");
       const queryParams = new URLSearchParams({
         page: currentPage,
         limit: limit,
         search: search,
       });
 
-      const response = await fetch(`https://dashboard.cityhangaround.com/api/master_table/list?${queryParams}`, {
+      const response = await fetch(`${apiBase}/master_table/list?${queryParams}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

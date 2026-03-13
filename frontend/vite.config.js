@@ -9,12 +9,14 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:8090',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
       },
       '/auth': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:8090',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/auth/, ""),
       },
     },
   },

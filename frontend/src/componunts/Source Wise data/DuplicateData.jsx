@@ -49,7 +49,8 @@ const DuplicateData = () => {
         city: citySearch,
       });
 
-      const response = await fetch(`http://localhost:5000/?${queryParams}`);
+      const apiBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL : "";
+      const response = await fetch(`${apiBase}/?${queryParams}`);
       
       if (!response.ok) throw new Error("Backend connection failed");
 

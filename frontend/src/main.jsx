@@ -20,7 +20,7 @@ import "./tailwind.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ThemeProvider>
         <MaterialTailwindControllerProvider>
           {/* REPLACE 'YOUR_GOOGLE_CLIENT_ID' WITH YOUR ACTUAL CLIENT ID from Google Cloud Console */}

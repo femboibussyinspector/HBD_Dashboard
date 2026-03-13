@@ -69,7 +69,7 @@ function DashboardNavbar() {
 
               return isLast ? (
                 <Typography
-                  key={name}
+                  key={routeTo}
                   variant="small"
                   color="blue-gray"
                   className="font-normal"
@@ -77,7 +77,7 @@ function DashboardNavbar() {
                   {name}
                 </Typography>
               ) : (
-                <Link key={name} to={routeTo}>
+                <Link key={routeTo} to={routeTo}>
                   <Typography
                     variant="small"
                     color="blue-gray"
